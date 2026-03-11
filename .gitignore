@@ -48,8 +48,8 @@ openapi.json
 
 
 # production DB (directory tracked via .gitkeep for volume mount)
-database/*
-!database/.gitkeep
+resources/database/*
+!resources/database/.gitkeep
 
 # Optional custom Caddy config (user-provided files in resources/caddy/)
 resources/caddy/*
