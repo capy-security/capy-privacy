@@ -55,7 +55,7 @@ services:
     volumes:
       - ./resources/ssl/:/etc/ssl/
       - ./resources/caddy:/etc/caddy/custom/:ro
-      - ./resources/www/:/var/capy/www/
+      - ./resources/www/:/var/capy/website/
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
