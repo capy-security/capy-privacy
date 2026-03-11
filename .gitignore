@@ -58,3 +58,7 @@ resources/caddy/*
 # SSL certs (directory tracked via .gitkeep for volume mount)
 resources/ssl/*
 !resources/ssl/.gitkeep
+
+# www (directory tracked via .gitkeep for volume mount)
+resources/www/*
+!resources/www/.gitkeep

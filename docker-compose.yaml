@@ -54,7 +54,8 @@ services:
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
     volumes:
       - ./resources/ssl/:/etc/ssl/
-      - ./resources/caddy:/etc/caddy/custom:ro
+      - ./resources/caddy:/etc/caddy/custom/:ro
+      - ./resources/www/:/var/capy/www/
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
