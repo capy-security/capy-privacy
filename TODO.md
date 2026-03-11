@@ -1,0 +1,3 @@
+- use pydantic-settings for api
+- use multi stage docker build
+- fix permissions and users for containers

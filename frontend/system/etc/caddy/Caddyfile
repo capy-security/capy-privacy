@@ -1,0 +1,127 @@
+# Capy Privacy - Caddy configuration (replaces Nginx)
+# Uses env: API_DOMAIN, DNS_DOMAIN, ADMIN_DOMAIN, IP_ADDRESS
+# {$VAR:default} = substituted before parsing; empty VAR would break (global block), so defaults are set.
+
+# -----------------------------------------------------------------------------
+# API - FastAPI backend
+# -----------------------------------------------------------------------------
+{$API_DOMAIN:api.localhost} {
+	tls /etc/ssl/api/fullchain.pem /etc/ssl/api/privkey.pem
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
+	reverse_proxy capy_api:8080 {
+		header_up Host {http.request.host}
+		header_up X-Real-IP {http.request.remote.host}
+		header_up X-Forwarded-For {http.request.remote.host}
+		header_up X-Forwarded-Proto {http.request.scheme}
+		header_up X-Forwarded-Host {http.request.host}
+		header_up X-Forwarded-Port {http.request.port}
+		transport http {
+			read_timeout 60s
+			write_timeout 60s
+		}
+	}
+}
+
+# -----------------------------------------------------------------------------
+# DNS - DoH
+# -----------------------------------------------------------------------------
+{$DNS_DOMAIN:dns.localhost} {
+	tls /etc/ssl/dns/fullchain.pem /etc/ssl/dns/privkey.pem
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
+	root * /var/capy/www
+
+	# DoH endpoint
+	handle /dns-query {
+		reverse_proxy capy_core:5300 {
+			transport http {
+				read_timeout 10s
+				write_timeout 10s
+			}
+		}
+	}
+
+}
+
+
+# -----------------------------------------------------------------------------
+# Admin (web UI)
+# -----------------------------------------------------------------------------
+{$ADMIN_DOMAIN:localhost} {
+	tls /etc/ssl/admin/fullchain.pem /etc/ssl/admin/privkey.pem
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
+	root * /var/capy/www
+
+	# Static assets with cache (30d)
+	@static path_regexp .*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|json)$
+	handle @static {
+		header Cache-Control "public, max-age=2592000"
+		file_server
+	}
+
+	# SPA fallback
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
+# -----------------------------------------------------------------------------
+# Block page (IP) - HTTP only (no TLS on port 80)
+# -----------------------------------------------------------------------------
+http://{$IP_ADDRESS:127.0.0.1} {
+	root * /var/capy/resources
+	file_server
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+	}
+}
+
+# -----------------------------------------------------------------------------
+# Block page (IP) - HTTPS
+# -----------------------------------------------------------------------------
+https://{$IP_ADDRESS:127.0.0.1} {
+	tls /etc/ssl/ip/fullchain.pem /etc/ssl/ip/privkey.pem
+
+	root * /var/capy/resources
+	file_server
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+# Optional: user-provided config (mount resources/caddy to /etc/caddy/custom)
+import /etc/caddy/custom/*

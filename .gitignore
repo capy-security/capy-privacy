@@ -1,0 +1,60 @@
+# PYTON
+venv/
+__pypackages__/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
+# React
+node_modules/
+.yarn/
+.yarnrc.yml
+.yarnrc.yml
+.pnp
+.pnp.js
+
+# Build output
+# dist/
+# build/
+
+# Environment variables & local certs (start.sh)
+.env
+.env.local
+.env.production.local
+.env.development.local
+privkey.pem
+fullchain.pem
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OpenAPI spec file
+openapi.json
+
+
+# production DB (directory tracked via .gitkeep for volume mount)
+database/*
+!database/.gitkeep
+
+# Optional custom Caddy config (user-provided files in resources/caddy/)
+resources/caddy/*
+!resources/caddy/.gitkeep
+
+# SSL certs (directory tracked via .gitkeep for volume mount)
+resources/ssl/*
+!resources/ssl/.gitkeep

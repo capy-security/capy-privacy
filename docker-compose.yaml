@@ -1,0 +1,77 @@
+services:
+  capy_api:
+    image: capy_api:latest
+    restart: always
+    environment:
+      API_ENV: "production"
+    volumes:
+      - ./database/:/var/capy/database/
+    ports:
+      - "127.0.0.1:8080:8080/tcp"
+    expose:
+      - "8080"
+    build:
+      context: ./api
+      args:
+        application: "api"
+        domain: "${API_DOMAIN:-api.capysecurity.com}"
+      tags:
+        - test
+
+  capy_core:
+    image: capy_core:latest
+    restart: always
+    volumes:
+      - ./database/:/var/capy/database/
+      - ./resources/ssl/:/etc/ssl/
+    ports:
+      - "53:53/udp"
+      - "5300:5300/tcp"
+      - "853:853/tcp"
+    expose:
+      - "53"
+      - "853"
+      - "5300"
+    ulimits:
+      nofile:
+        soft: 16000
+        hard: 16000
+    build:
+      context: ./core
+      args:
+        application: "core"
+        domain: "${DNS_DOMAIN:-dns.capysecurity.com}"
+      tags:
+        - test
+
+  capy_frontend:
+    image: capy_frontend:latest
+    restart: always
+    environment:
+      API_DOMAIN: ${API_DOMAIN:-api.localhost}
+      DNS_DOMAIN: ${DNS_DOMAIN:-dns.localhost}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-localhost}
+      IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
+    volumes:
+      - ./resources/ssl/:/etc/ssl/
+      - ./resources/caddy:/etc/caddy/custom:ro
+    ports:
+      - '80:80/tcp'
+      - '443:443/tcp'
+    expose:
+      - '80'
+      - '443'
+    build:
+      context: ./frontend
+      args:
+        application: "frontend"
+        domain: "${ADMIN_DOMAIN:-admin.capysecurity.com}"
+        ip_address: "${IP_ADDRESS:-91.134.137.25}"
+      tags:
+        - test
+
+volumes:
+  capy_database:
+    # networks:
+    #   local:
+    #     driver: bridge
