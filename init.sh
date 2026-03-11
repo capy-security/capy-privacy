@@ -40,6 +40,10 @@ else
   [[ -z "$IP_ADDRESS" ]] && { echo "Public IP is required."; exit 1; }
   read -r -p "Email for Let's Encrypt: " EMAIL
   [[ -z "$EMAIL" ]] && { echo "Email is required."; exit 1; }
+  echo "Force new certificate generation (e.g. after key rotation / leak)?"
+  read -r -p "  [y/N]: " FORCE_RENEW
+  FORCE_RENEW="${FORCE_RENEW:-n}"
+  [[ "$FORCE_RENEW" =~ ^[yY] ]] && CERTBOT_EXTRA="--force-renewal" || CERTBOT_EXTRA=""
 fi
 echo ""
 
@@ -66,7 +70,7 @@ else
   LE_LIVE="/etc/letsencrypt/live"
   for name in "$API_DOMAIN" "$DNS_DOMAIN" "$ADMIN_DOMAIN"; do
     echo "  Certificate for ${name} ..."
-    sudo certbot certonly --standalone --non-interactive --agree-tos -m "$EMAIL" -d "$name"
+    sudo certbot certonly --standalone --non-interactive --agree-tos -m "$EMAIL" -d "$name" $CERTBOT_EXTRA
   done
   echo "  Self-signed for IP (block page): ${IP_ADDRESS} ..."
   mkdir -p "${SSL_DIR}/api" "${SSL_DIR}/dns" "${SSL_DIR}/admin" "${SSL_DIR}/ip"
