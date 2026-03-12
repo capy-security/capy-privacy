@@ -67,7 +67,9 @@ async def create_admin(
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
 ) -> ApiResponse:
     """Create a new admin user"""
-    response = ApiResponse(success=False, message="", data={})
+    response = ApiResponse(
+        success=True, message="Root Admin user created successfully", data={}
+    )
 
     # check if user table is empty
     if UserDB.select().count() == 0:

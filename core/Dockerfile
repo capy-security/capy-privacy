@@ -1,36 +1,35 @@
 # syntax=docker/dockerfile:1
-FROM debian:trixie-slim
+# DNS core: PowerDNS Recursor + dnsdist + metrics listener (Alpine)
+# Build context: ./core (e.g. docker compose build capy_core)
 
-USER root
+# -----------------------------------------------------------------------------
+# Stage: runtime (alpine:latest for newer pdns-recursor; edge has broken dnsdist deps)
+# -----------------------------------------------------------------------------
+FROM alpine:latest
+
 ARG application="capy-core"
 ARG domain="dns.capysecurity.com"
+ARG TARGETARCH
+
 WORKDIR /${application}
 ENV domain=${domain}
 
-RUN apt-get update \
-    && apt-get -y upgrade
+# Base + DNS stack (community repo has pdns-recursor, dnsdist)
+RUN apk add --no-cache \
+    nano \
+    sudo \
+    procps \
+    pdns-recursor \
+    dnsdist \
+    sqlite \
+    lua5.4-sql-sqlite3 \
+    supervisor
 
-RUN apt-get -y install nano \
-    && apt-get -y install sudo \
-    && apt-get -y install procps \
-    && apt-get -y install apt-utils
-
-RUN apt-get -y install pdns-recursor \
-    && apt-get -y install gettext-base \
-    && apt-get -y install dnsdist \
-    && apt-get -y install sqlite3 \
-    && apt-get -y install lua-sql-sqlite3 \
-    && apt-get -y install supervisor
-
-RUN apt-get autoremove \
-    && apt-get clean
-
+# Copy config and static resources
 COPY system/ /
-# COPY resources/dnsdist.conf.tpl .
 COPY resources/metrics/ /tmp/metrics/
 
-# Copy the appropriate listener binary based on architecture
-ARG TARGETARCH
+# Architecture-specific metrics listener binary
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
     cp /tmp/metrics/listener-linux-amd64 /usr/bin/listener; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
@@ -41,26 +40,17 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     chmod +x /usr/bin/listener && \
     rm -rf /tmp/metrics
 
-# RUN cat dnsdist.conf.tpl | envsubst '${domain}' > /etc/dnsdist/dnsdist.conf && rm dnsdist.conf.tpl
+# Alpine pdns-recursor expects /etc/pdns; we keep config in /etc/powerdns and symlink
+RUN rm -rf /etc/pdns && ln -s /etc/powerdns /etc/pdns
 
-
-# Database setup
-RUN mkdir -p /var/capy/database/
-RUN chown -R pdns:pdns /var/capy/database/
-# powerdns / dnsdist setup
-RUN mkdir -p /var/run/pdns-recursor
-RUN mkdir -p /etc/ssl/
-RUN mkdir -p /var/log/supervisor
-RUN chown -R _dnsdist:_dnsdist /etc/dnsdist/
-RUN chown -R pdns:pdns /etc/ssl/
-RUN chown -R pdns:pdns /var/log/supervisor
-
-
+# Directories (Alpine pdns-recursor uses user recursor; supervisor runs as root)
+RUN mkdir -p /var/capy/database/ \
+    && mkdir -p /var/run/pdns-recursor \
+    && mkdir -p /etc/ssl/ \
+    && mkdir -p /var/log/supervisor
 
 EXPOSE 53/udp
 EXPOSE 853/tcp
 EXPOSE 5300/tcp
 
-CMD ["/usr/bin/supervisord"]
-
-### docker build --no-cache --tag dns .
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

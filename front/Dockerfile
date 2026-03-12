@@ -24,9 +24,9 @@ ENV VITE_API_URL=${VITE_API_URL}
 RUN yarn build
 
 # -----------------------------------------------------------------------------
-# Stage 2: runtime with Caddy + supervisor (Alpine)
+# Stage 2: runtime with Caddy + supervisor (alpine:latest, same as core)
 # -----------------------------------------------------------------------------
-FROM alpine:3.20
+FROM alpine:latest
 
 RUN apk add --no-cache caddy supervisor
 
