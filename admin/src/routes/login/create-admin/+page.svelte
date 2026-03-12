@@ -1,29 +1,30 @@
 <script lang="ts">
-	import { authorizationStore } from '$lib/stores/authorization';
 	import { goto } from '$app/navigation';
+	import { createAdminAuthAdminPost } from '$lib/api/generated/authentication/authentication';
+	import { UserRole } from '$lib/api/generated/models/userRole';
 	import {
 		Envelope,
 		LockClosed,
+		User as UserIcon,
 		ExclamationCircle,
-		ArrowRightOnRectangle,
-		ArrowPath
+		ArrowPath,
+		ArrowLeft
 	} from 'svelte-heros-v2';
 
+	let displayName = $state('');
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
 	let localError = $state<string | null>(null);
-	let user = $derived($authorizationStore);
+	let successMessage = $state<string | null>(null);
 
-	// Get error from local validation
 	const error = $derived(localError);
 
 	async function handleSubmit() {
-		// Clear any previous errors before validation
 		localError = null;
+		successMessage = null;
 
-		// Local validation - these are client-side checks
-		if (!email || !password) {
+		if (!displayName?.trim() || !email?.trim() || !password) {
 			localError = 'Please fill in all fields';
 			return;
 		}
@@ -33,25 +34,36 @@
 			return;
 		}
 
-		// Clear local errors before API call - API errors will replace them
+		if (displayName.trim().length > 64) {
+			localError = 'Display name must be at most 64 characters';
+			return;
+		}
+
 		isLoading = true;
 		localError = null;
 
 		try {
-			console.log(`[Login.handleLogin] Starting login for ${email}`);
-			await authorizationStore.login(email, password);
-			console.log(`[Login.handleLogin] Login successful`);
-			// Redirect to home page after successful login
-			goto('/');
-		} catch (err) {
-			console.error('[Login.handleLogin] Login failed:', err);
-			// Preserve the API error message - it should already be extracted in the store
-			if (err instanceof Error) {
-				localError = err.message;
+			const response = await createAdminAuthAdminPost({
+				display_name: displayName.trim(),
+				email: email.trim(),
+				password,
+				role: UserRole.NUMBER_1
+			});
+
+			if (response.status === 200) {
+				const msg = response.data?.message ?? '';
+				if (msg.includes('already exists')) {
+					localError = response.data?.message || 'Admin already exists. Sign in instead.';
+				} else {
+					successMessage = 'Admin account created. You can now sign in.';
+					setTimeout(() => goto('/login'), 1500);
+				}
 			} else {
-				// Fallback only if error is not an Error instance (shouldn't happen)
-				localError = 'Login failed. Please try again.';
+				localError = 'Could not create admin. Try again or sign in if one already exists.';
 			}
+		} catch (err) {
+			console.error('[CreateAdmin] Failed:', err);
+			localError = err instanceof Error ? err.message : 'Failed to create admin account.';
 		} finally {
 			isLoading = false;
 		}
@@ -62,9 +74,11 @@
 	<div class="w-full max-w-md">
 		<div>
 			<h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-				Sign in to your account
+				Create admin account
 			</h2>
-			<p class="mt-2 text-center text-sm text-gray-300">Please sign in to continue</p>
+			<p class="mt-2 text-center text-sm text-gray-300">
+				First time only — use this when no admin exists yet.
+			</p>
 		</div>
 		<form
 			class="mt-8 space-y-6"
@@ -85,10 +99,39 @@
 					</div>
 				</div>
 			{/if}
+			{#if successMessage}
+				<div class="rounded-md border border-emerald-500/30 bg-emerald-500/20 p-4 backdrop-blur-sm">
+					<p class="text-sm font-medium text-emerald-200">{successMessage}</p>
+				</div>
+			{/if}
 
 			<div class="space-y-4 rounded-md">
 				<div>
-					<label for="email" class="block text-sm font-medium text-gray-200"> Email address </label>
+					<label for="display_name" class="block text-sm font-medium text-gray-200">
+						Display name
+					</label>
+					<div class="relative mt-1">
+						<div
+							class="pointer-events-none absolute inset-y-0 left-0 isolate z-10 flex items-center pl-3"
+						>
+							<UserIcon class="h-5 w-5 text-gray-100" />
+						</div>
+						<input
+							id="display_name"
+							name="display_name"
+							type="text"
+							autocomplete="name"
+							required
+							maxlength="64"
+							class="block w-full rounded-md border border-white/20 bg-white/10 py-2 pr-3 pl-10 text-white placeholder-gray-300 backdrop-blur-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 sm:text-sm"
+							placeholder="Admin"
+							bind:value={displayName}
+							disabled={isLoading}
+						/>
+					</div>
+				</div>
+				<div>
+					<label for="email" class="block text-sm font-medium text-gray-200">Email address</label>
 					<div class="relative mt-1">
 						<div
 							class="pointer-events-none absolute inset-y-0 left-0 isolate z-10 flex items-center pl-3"
@@ -109,7 +152,7 @@
 					</div>
 				</div>
 				<div>
-					<label for="password" class="block text-sm font-medium text-gray-200"> Password </label>
+					<label for="password" class="block text-sm font-medium text-gray-200">Password</label>
 					<div class="relative mt-1">
 						<div
 							class="pointer-events-none absolute inset-y-0 left-0 isolate z-10 flex items-center pl-3"
@@ -120,7 +163,7 @@
 							id="password"
 							name="password"
 							type="password"
-							autocomplete="current-password"
+							autocomplete="new-password"
 							required
 							class="block w-full rounded-md border border-white/20 bg-white/10 py-2 pr-3 pl-10 text-white placeholder-gray-300 backdrop-blur-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 sm:text-sm"
 							placeholder="Your password"
@@ -139,18 +182,18 @@
 				>
 					{#if isLoading}
 						<ArrowPath class="mr-3 -ml-1 h-5 w-5 animate-spin text-white" />
-						Signing in...
+						Creating...
 					{:else}
-						<ArrowRightOnRectangle class="mr-2 -ml-1 h-5 w-5 text-white" />
-						Sign in
+						Create admin account
 					{/if}
 				</button>
 				<p class="mt-4 text-center">
 					<a
-						href="/login/create-admin"
-						class="text-sm text-violet-300 underline decoration-violet-400/50 underline-offset-2 transition hover:text-violet-200 hover:decoration-violet-300"
+						href="/login"
+						class="inline-flex items-center text-sm text-violet-300 underline decoration-violet-400/50 underline-offset-2 transition hover:text-violet-200 hover:decoration-violet-300"
 					>
-						Create admin account (first time only)
+						<ArrowLeft class="mr-1 h-4 w-4" />
+						Back to sign in
 					</a>
 				</p>
 			</div>

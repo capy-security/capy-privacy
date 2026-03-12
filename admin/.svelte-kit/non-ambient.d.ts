@@ -27,7 +27,7 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/categories" | "/clients" | "/configuration" | "/domains" | "/groups" | "/login" | "/metrics" | "/profile" | "/statistics" | "/users";
+		RouteId(): "/" | "/categories" | "/clients" | "/configuration" | "/domains" | "/groups" | "/login" | "/login/create-admin" | "/metrics" | "/profile" | "/statistics" | "/users";
 		RouteParams(): {
 			
 		};
@@ -39,12 +39,13 @@ declare module "$app/types" {
 			"/domains": Record<string, never>;
 			"/groups": Record<string, never>;
 			"/login": Record<string, never>;
+			"/login/create-admin": Record<string, never>;
 			"/metrics": Record<string, never>;
 			"/profile": Record<string, never>;
 			"/statistics": Record<string, never>;
 			"/users": Record<string, never>
 		};
-		Pathname(): "/" | "/categories" | "/clients" | "/configuration" | "/domains" | "/groups" | "/login" | "/metrics" | "/profile" | "/statistics" | "/users";
+		Pathname(): "/" | "/categories" | "/clients" | "/configuration" | "/domains" | "/groups" | "/login" | "/login/create-admin" | "/metrics" | "/profile" | "/statistics" | "/users";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/.DS_Store" | "/capy.svg" | "/favicon.ico" | "/robots.txt" | string & {};
 	}

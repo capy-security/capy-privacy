@@ -505,6 +505,22 @@
 			<span class="hidden md:inline">Create Domain</span>
 		</button>
 
+		<!-- Update Ads Button -->
+		<button
+			type="button"
+			onclick={handleUpdateAds}
+			disabled={isUpdatingAds}
+			class="flex items-center justify-center p-2 md:px-4 md:py-2 md:gap-2 rounded-md border border-white/30 bg-white/10 font-medium text-white shadow transition-all hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			{#if isUpdatingAds}
+				<ArrowPath class="h-5 w-5 animate-spin" />
+				<span class="hidden md:inline">Updating…</span>
+			{:else}
+				<ArrowPath class="h-5 w-5" />
+				<span class="hidden md:inline">Update Ads</span>
+			{/if}
+		</button>
+
 		<!-- Separator -->
 		<div class="hidden md:block h-8 w-px bg-white/20"></div>
 

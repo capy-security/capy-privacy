@@ -21,6 +21,9 @@
 	"/login": [
 		"src/routes/+layout.ts"
 	],
+	"/login/create-admin": [
+		"src/routes/+layout.ts"
+	],
 	"/metrics": [
 		"src/routes/+layout.ts"
 	],
