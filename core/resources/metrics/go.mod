@@ -1,4 +1,4 @@
-module capy-security-metrics
+module capy-metrics
 
 go 1.21
 

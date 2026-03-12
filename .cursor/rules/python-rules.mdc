@@ -1,0 +1,37 @@
+---
+description: Python tooling and style — Poetry, FastAPI, Pydantic, peewee
+alwaysApply: false
+globs: "**/*.py"
+---
+
+# Python rules
+
+## Running Python (Poetry)
+
+This repo uses Poetry for dependency and environment management. Always run Python and tools via Poetry so the correct virtualenv is used.
+
+- Python: `poetry run python ...` or `poetry run python3 ...`
+- Pytest: `poetry run pytest ...`
+
+Run from the directory that contains `pyproject.toml` for the project you're working on. In this repo the only Python app is **api** (REST API).
+
+Example:
+
+```bash
+cd api && poetry run pytest tests/
+cd api && poetry run python -c "from api import ..."
+```
+
+## HTTP and API (FastAPI)
+
+The API is built with FastAPI and uvicorn. Use FastAPI's request/response handling and dependency injection; avoid adding a separate async HTTP client (e.g. aiohttp) unless you have a clear need outside the request lifecycle.
+
+## Validation and config (Pydantic)
+
+Use Pydantic when you need:
+
+- Structured data validation (API request/response bodies, config objects, parsed payloads)
+- Settings / configuration (env-based config, e.g. `BaseSettings`)
+- Serialization with validation (e.g. `.model_dump()`, `.model_dump_json()`)
+
+The API uses Pydantic models for all API schemas and pairs them with peewee DB models via `from_pydantic` / `to_pydantic`. Prefer Pydantic over ad-hoc dicts, dataclasses without validation, or manual checks. Use `BaseModel` and define fields with types and validators so invalid data fails fast with clear errors. Do not force Pydantic where it doesn't add value (e.g. trivial internal structs that never cross boundaries).

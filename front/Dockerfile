@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1
+# Multi-stage: build admin frontend, then serve with Caddy
+# Build context must be repo root so both admin/ and front/ are available.
+# docker compose -f docker-compose.yaml build capy_front  (from repo root)
+
+# -----------------------------------------------------------------------------
+# Stage 1: build admin SvelteKit app
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy admin app (package.json, lockfile, config, source)
+COPY admin/package.json admin/yarn.lock* admin/package-lock.json* ./
+COPY admin/ ./
+
+RUN corepack enable yarn \
+    && yarn install --frozen-lockfile
+
+# Build-time API URL (Vite embeds this)
+ARG VITE_API_URL=https://api.localhost/
+ENV VITE_API_URL=${VITE_API_URL}
+
+RUN yarn build
+
+# -----------------------------------------------------------------------------
+# Stage 2: runtime with Caddy + supervisor (Alpine)
+# -----------------------------------------------------------------------------
+FROM alpine:3.20
+
+RUN apk add --no-cache caddy supervisor
+
+RUN mkdir -p /var/capy/www/
+RUN mkdir -p /etc/caddy/custom
+RUN mkdir -p /var/log/supervisor/
+
+# Copy Caddy + supervisor config and static resources from front/system
+COPY front/system/etc/ /etc/
+COPY front/system/var/capy/resources/ /var/capy/resources/
+
+
+# Copy built admin app into www
+COPY --from=builder /app/build/ /var/capy/www/
+
+RUN chown -R caddy:www-data /var/capy/www/ /var/capy/resources/
+
+EXPOSE 80/tcp
+EXPOSE 443/tcp
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

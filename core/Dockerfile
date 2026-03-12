@@ -2,7 +2,7 @@
 FROM debian:trixie-slim
 
 USER root
-ARG application="capy-security-core"
+ARG application="capy-core"
 ARG domain="dns.capysecurity.com"
 WORKDIR /${application}
 ENV domain=${domain}

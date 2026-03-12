@@ -1,3 +1,5 @@
+# Base domain (e.g. capysecurity.com). API/DNS/Admin are always api.$DOMAIN, dns.$DOMAIN, admin.$DOMAIN.
+# Set DOMAIN (and optionally IP_ADDRESS) in .env.
 services:
   capy_api:
     image: capy_api:latest
@@ -14,7 +16,7 @@ services:
       context: ./api
       args:
         application: "api"
-        domain: "${API_DOMAIN:-api.capysecurity.com}"
+        domain: "api.${DOMAIN:-localhost}"
       tags:
         - test
 
@@ -40,17 +42,18 @@ services:
       context: ./core
       args:
         application: "core"
-        domain: "${DNS_DOMAIN:-dns.capysecurity.com}"
+        domain: "dns.${DOMAIN:-localhost}"
       tags:
         - test
 
-  capy_frontend:
-    image: capy_frontend:latest
+  capy_front:
+    image: capy_front:latest
     restart: always
     environment:
-      API_DOMAIN: ${API_DOMAIN:-api.localhost}
-      DNS_DOMAIN: ${DNS_DOMAIN:-dns.localhost}
-      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-localhost}
+      DOMAIN: ${DOMAIN:-localhost}
+      API_DOMAIN: api.${DOMAIN:-localhost}
+      DNS_DOMAIN: dns.${DOMAIN:-localhost}
+      ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
     volumes:
       - ./resources/ssl/:/etc/ssl/
@@ -63,11 +66,13 @@ services:
       - '80'
       - '443'
     build:
-      context: ./frontend
+      context: .
+      dockerfile: front/Dockerfile
       args:
-        application: "frontend"
-        domain: "${ADMIN_DOMAIN:-admin.capysecurity.com}"
-        ip_address: "${IP_ADDRESS:-91.134.137.25}"
+        application: "admin"
+        domain: "admin.${DOMAIN:-localhost}"
+        ip_address: "${IP_ADDRESS:-127.0.0.1}"
+        VITE_API_URL: "https://api.${DOMAIN:-localhost}/"
       tags:
         - test
 

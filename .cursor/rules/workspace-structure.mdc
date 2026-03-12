@@ -1,0 +1,21 @@
+---
+description: Repo layout; main apps (api, admin) and supporting services (core, front)
+alwaysApply: true
+---
+
+# Workspace structure
+
+This repo is the **capy-privacy** project: DNS privacy / filtering stack with a REST API and an admin Svelte app. When running commands, use the env for the part you're working on (see the rule files below for how).
+
+## Roots and tech stack
+
+| Folder | Role                         | Stack                     | How to run             |
+| ------ | ---------------------------- | ------------------------- | ---------------------- |
+| api    | REST API (auth, DNS config)  | Python 3, Poetry, FastAPI | @python-rules.mdc      |
+| admin  | Admin UI (SvelteKit SPA)     | Svelte (SvelteKit/Vite)   | @javascript-rules.mdc  |
+| core   | DNS core (dnsdist, PowerDNS) | Config / shell            | See `core/` and Docker |
+| front  | Reverse proxy + static host  | Caddy, serves built admin | See `front/Dockerfile` |
+
+- **api**: run from `api/` with Poetry (`poetry run python`, `poetry run pytest`, etc.).
+- **admin**: run from `admin/` with yarn (`yarn dev`, `yarn build`, `yarn api` for Orval).
+- **core** and **front** are built via Docker; see `docker-compose.yaml`.

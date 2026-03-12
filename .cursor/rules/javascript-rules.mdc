@@ -1,0 +1,33 @@
+---
+description: Frontend — admin app (SvelteKit, yarn, Orval, svelte-query)
+alwaysApply: false
+globs: "admin/**"
+---
+
+# Frontend rules
+
+## Yarn
+
+The **admin** folder is a Svelte (SvelteKit/Vite) app. Use yarn from that directory. Run commands from `admin/`. Use yarn only; do not use npm or pnpm.
+
+Examples:
+
+- Dev server: `yarn dev`
+- Build: `yarn build`
+- Generate API client: `yarn api` (runs Orval)
+
+## SvelteKit
+
+The admin app is built with SvelteKit (and Vite). Follow SvelteKit conventions:
+
+- Routes live under `src/routes/`;
+- Use SvelteKit aliases: `$lib`, `$app/state`, `$app/paths`, `$app/navigation` (and other `$app/*` modules).
+- Prefer Svelte 5 runes in components: `$props()`, `$state()`, `$derived()`, `$effect()` where applicable.
+- The root layout (`src/routes/+layout.svelte`) wraps the app in `QueryClientProvider` from `@tanstack/svelte-query`; all pages share the same `queryClient` from `$lib` / `useQueryClient()`.
+
+## Orval (API client)
+
+Orval generates the TypeScript API client from the capy API OpenAPI spec. Config: `admin/orval.config.ts` (single backend **capy**). Generated code: `admin/src/lib/api/generated/` (endpoints by tag and `models/`). Regenerate with `yarn api` from `admin/`; do not edit generated files.
+
+- Requests use the custom mutator (`admin/src/lib/api/mutator.ts`): sets base URL, JSON headers, and handles the API envelope (`success` / `data`) and errors so TanStack Query sees failures correctly.
+- In components: use the generated hooks (queries and mutations). Invalidate cache with `useQueryClient()` and the appropriate `queryKey` (e.g. from `getReadObjectDnsTableGetQueryKey`) after mutations.

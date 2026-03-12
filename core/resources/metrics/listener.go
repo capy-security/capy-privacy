@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"capy-security-metrics/pb"
+	"capy-metrics/pb"
 	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
 )
