@@ -19,7 +19,7 @@ class BaseConfig:
 
 class ProductionConfig(BaseConfig):
     api_env = "production"
-    api_secret = "CrazyVeganUnicorn0@#!)"
+    api_secret = os.environ.get("API_SECRET", "")
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_PROD)}"
     # mysql+pymysql://db_user:db_pass@localhost/db_name
     # SERVER_NAME = "capysecurity.com"
@@ -39,7 +39,13 @@ choice = {
 
 def get_config():
     api_env = os.environ.get("API_ENV")
-    return choice.get(api_env or "production")
+    config = choice.get(api_env or "production")
+    if config is ProductionConfig and not config.api_secret:
+        raise ValueError(
+            "API_SECRET environment variable is required in production. "
+            "Run prerequisites.sh to generate .env with API_SECRET, or set API_SECRET when starting the API."
+        )
+    return config
 
 
 global api_conf

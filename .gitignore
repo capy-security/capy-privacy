@@ -6,7 +6,10 @@ __pycache__/
 *$py.class
 .Python
 
-# React
+# SvelteKit (admin) – generated build/cache, regenerated on build
+.svelte-kit/
+
+# React / Node
 node_modules/
 .yarn/
 .yarnrc.yml

@@ -1,3 +1,7 @@
 - use pydantic-settings for api
 - use multi stage docker build
 - fix permissions and users for containers
+- schedule databse cleaning
+- schedule adblock list updates
+- RPZ / NXDOMAIN
+- improve authentication and authorization

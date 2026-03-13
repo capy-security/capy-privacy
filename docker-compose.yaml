@@ -4,6 +4,7 @@ services:
   capy_api:
     image: capy_api:latest
     restart: always
+    env_file: .env
     environment:
       API_ENV: "production"
     volumes:
@@ -58,7 +59,7 @@ services:
     volumes:
       - ./resources/ssl/:/etc/ssl/
       - ./resources/caddy:/etc/caddy/custom/:ro
-      - ./resources/www/:/var/capy/website/
+      - ./resources/custom/:/var/capy/custom/ # custom website data
     ports:
       - '80:80/tcp'
       - '443:443/tcp'

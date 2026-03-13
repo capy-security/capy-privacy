@@ -30,19 +30,18 @@ FROM alpine:latest
 
 RUN apk add --no-cache caddy supervisor
 
-RUN mkdir -p /var/capy/www/
+RUN mkdir -p /var/capy/admin/
 RUN mkdir -p /etc/caddy/custom
 RUN mkdir -p /var/log/supervisor/
 
 # Copy Caddy + supervisor config and static resources from front/system
 COPY front/system/etc/ /etc/
-COPY front/system/var/capy/resources/ /var/capy/resources/
+COPY front/system/var/capy/resources/ /var/capy/blocked/
 
+# Copy built admin app
+COPY --from=builder /app/build/ /var/capy/admin/
 
-# Copy built admin app into www
-COPY --from=builder /app/build/ /var/capy/www/
-
-RUN chown -R caddy:www-data /var/capy/www/ /var/capy/resources/
+RUN chown -R caddy:www-data /var/capy/admin/ /var/capy/blocked/
 
 EXPOSE 80/tcp
 EXPOSE 443/tcp

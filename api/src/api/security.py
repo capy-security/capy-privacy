@@ -18,7 +18,7 @@ ADMIN_ONLY_FUNCTIONS = {
     "create_object",
     "read_object",
     "update_object",
-    # "delete_object",
+    "delete_object",
 }
 
 # Functions that require any authenticated user

@@ -46,7 +46,7 @@
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	root * /var/capy/www
+	root * /var/capy/admin
 
 	# DoH endpoint
 	handle /dns-query {
@@ -74,7 +74,7 @@
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	root * /var/capy/www
+	root * /var/capy/admin
 
 	# Static assets with cache (30d)
 	@static path_regexp .*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|json)$
@@ -93,7 +93,7 @@
 # Block page (IP) - HTTP only (no TLS on port 80)
 # -----------------------------------------------------------------------------
 http://{$IP_ADDRESS:127.0.0.1} {
-	root * /var/capy/resources
+	root * /var/capy/blocked
 	file_server
 
 	header {
@@ -109,7 +109,7 @@ http://{$IP_ADDRESS:127.0.0.1} {
 https://{$IP_ADDRESS:127.0.0.1} {
 	tls /etc/ssl/ip/fullchain.pem /etc/ssl/ip/privkey.pem
 
-	root * /var/capy/resources
+	root * /var/capy/blocked
 	file_server
 
 	header {
@@ -121,5 +121,5 @@ https://{$IP_ADDRESS:127.0.0.1} {
 	}
 }
 
-# Optional: user-provided config (mount resources/caddy to /etc/caddy/custom)
-import /etc/caddy/custom/*
+# Optional: user-provided config (only *.conf in resources/caddy/ are loaded)
+import /etc/caddy/custom/*.conf

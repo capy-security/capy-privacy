@@ -1,5 +1,5 @@
 capysecurity.com {
-	tls /etc/ssl/website/fullchain.pem /etc/ssl/website/privkey.pem
+	tls /etc/ssl/custom/fullchain.pem /etc/ssl/custom/privkey.pem
 	# located here on host: /etc/letsencrypt/live/capysecurity.com/
 
 	header {
@@ -11,7 +11,7 @@ capysecurity.com {
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	root * /var/capy/website/
+	root * /var/capy/custom/
 
 	# Static assets with cache (30d)
 	@static path_regexp .*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|json)$
