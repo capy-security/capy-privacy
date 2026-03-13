@@ -56,8 +56,6 @@ From the repo root (so Docker Compose picks up `.env`):
 docker compose up -d --build
 ```
 
-From another directory: `docker compose --env-file /path/to/capy-privacy/.env -f /path/to/capy-privacy/docker-compose.yaml up -d --build`.
-
 4. **Create the first admin**
 
 ![Create New Admin](docs/admin.png)
