@@ -1,10 +1,14 @@
 # Capy Privacy DNS
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 Home DNS filtering platform with
 
 - DNS recursive server for home devices
 - DNS-over-HTTPS (DoH) for phones and Web browsers
 - Single Page Application web UI + API to manage domains, clients, and blocklists
+
+![Web interface](docs/webui.png)
 
 ## Architecture
 
@@ -101,6 +105,10 @@ capy-privacy/
 ├── admin/                # SvelteKit source for the admin UI (built into front image)
 └── resources/            # SSL, database, caddy custom config (created by setup)
 ```
+
+## License
+
+This project is licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0). See [LICENSE](LICENSE).
 
 ## Contact
 

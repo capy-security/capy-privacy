@@ -272,7 +272,7 @@ yarn format
 
 ## 📄 License
 
-[Add your license information here]
+See the [project LICENSE](../../LICENSE) (GNU GPL v3).
 
 ## 🙏 Acknowledgments
 
