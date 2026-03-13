@@ -31,12 +31,11 @@ FROM alpine:latest
 RUN apk add --no-cache caddy supervisor
 
 RUN mkdir -p /var/capy/admin/
-RUN mkdir -p /etc/caddy/custom
+RUN mkdir -p /etc/caddy/custom/
 RUN mkdir -p /var/log/supervisor/
 
 # Copy Caddy + supervisor config and static resources from front/system
-COPY front/system/etc/ /etc/
-COPY front/system/var/capy/resources/ /var/capy/blocked/
+COPY front/system/ /
 
 # Copy built admin app
 COPY --from=builder /app/build/ /var/capy/admin/
