@@ -1,0 +1,94 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.2.9 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.2.9">
+  <diagram name="Page-1" id="sEmbmYZEKoDbQEkW1S0E">
+    <mxGraphModel dx="795" dy="610" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=2;" value="" vertex="1">
+          <mxGeometry height="520" width="540" x="10" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;strokeWidth=2;fontColor=#793FCC;strokeColor=#793FCC;" value="" vertex="1">
+          <mxGeometry height="120" width="170" x="40" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#666666;" value="" vertex="1">
+          <mxGeometry height="100" width="480" x="40" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#385CFD;fontColor=#385CFD;" value="" vertex="1">
+          <mxGeometry height="120" width="120" x="240" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#385CFD;fontColor=#385CFD;" value="" vertex="1">
+          <mxGeometry height="120" width="120" x="400" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-6" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;strokeWidth=2;fontColor=#793FCC;strokeColor=#793FCC;" value="" vertex="1">
+          <mxGeometry height="97" width="100" x="180" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontStyle=1;fontColor=#666666;" value="Capy Front" vertex="1">
+          <mxGeometry height="30" width="480" x="40" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#666666;" value="Caddy reverse proxy" vertex="1">
+          <mxGeometry height="30" width="480" x="40" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-11" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontStyle=1;strokeWidth=2;fontColor=#793FCC;" value="Capy Core" vertex="1">
+          <mxGeometry height="30" width="170" x="40" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-12" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#793FCC;" value="- PowerDNS Recursor&lt;div&gt;- PowerDNS DNSDist&lt;/div&gt;&lt;div&gt;- capy.lua script&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="150" x="50" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-13" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontStyle=1;fontColor=#385CFD;" value="Capy API" vertex="1">
+          <mxGeometry height="30" width="120" x="240" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#385CFD;" value="FastAPI" vertex="1">
+          <mxGeometry height="30" width="120" x="240" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontStyle=1;fontColor=#385CFD;" value="Capy Admin" vertex="1">
+          <mxGeometry height="30" width="120" x="400" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#385CFD;" value="Svelte + Orval" vertex="1">
+          <mxGeometry height="30" width="120" x="400" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-18" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#385CFD;fontColor=#385CFD;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="360" y="479.99999999999994" as="sourcePoint" />
+            <mxPoint x="400" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontStyle=1;fontColor=#793FCC;" value="Block-lists" vertex="1">
+          <mxGeometry height="30" width="100" x="181" y="506.5" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-20" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#793FCC;" value="SQLite" vertex="1">
+          <mxGeometry height="30" width="100" x="180" y="536.5" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-21" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=light-dark(#793FCC,#EDEDED);fontColor=#793FCC;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="230" y="130" as="sourcePoint" />
+            <mxPoint x="229.66000000000003" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-22" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#793FCC;" value="DNS requests" vertex="1">
+          <mxGeometry height="30" width="90" x="181" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-23" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#385CFD;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="460" y="390" as="sourcePoint" />
+            <mxPoint x="460" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-24" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#793FCC;fontColor=#793FCC;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="140" y="390" as="sourcePoint" />
+            <mxPoint x="220" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-27" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontColor=none;noLabel=1;strokeColor=#385CFD;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="460" y="130" as="sourcePoint" />
+            <mxPoint x="459.6600000000001" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RAyLDDYKMCBrhz2og4Jt-28" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontFamily=Courier New;fontColor=#385CFD;" value="Admin interface" vertex="1">
+          <mxGeometry height="30" width="125" x="395" y="100" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

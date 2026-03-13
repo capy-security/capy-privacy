@@ -4,6 +4,8 @@ DNS filtering platform with DNS-over-HTTPS (DoH), a web UI, and an API to manage
 
 ## Architecture
 
+![Architecture diagram](docs/architecture.png)
+
 ```
                     Internet (clients)
                               │
