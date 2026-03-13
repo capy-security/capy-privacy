@@ -1,21 +1,57 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-</head>
-
-<body>
-
-    <div class="center">
-        <img src="logo-medium.png" alt="pirate" width="128" height="128">
-    </div>
-
-</body>
-
-<style>
-    .center {
-        text-align: center;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blocked — Capy Privacy</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: linear-gradient(#8b5cf6, #a855f7, #2563eb);
+      /* background: #2563eb; */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
     }
-</style>
-
+    .card {
+      text-align: center;
+      padding: 2rem 2.5rem;
+      max-width: 20rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      backdrop-filter: blur(8px);
+    }
+    .icon {
+      width: 3rem;
+      height: 3rem;
+      margin: 0 auto 1rem;
+      opacity: 0.9;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    p {
+      margin: 0.5rem 0 0;
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.75);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+    <h1>Access blocked</h1>
+    <p>This request was blocked by Capy Privacy.</p>
+  </div>
+</body>
 </html>
