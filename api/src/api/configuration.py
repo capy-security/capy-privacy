@@ -20,6 +20,11 @@ class BaseConfig:
 class ProductionConfig(BaseConfig):
     api_env = "production"
     api_secret = os.environ.get("API_SECRET", "")
+    origins = [
+        "*",
+        f"admin.{os.environ.get('DOMAIN', 'localhost')}",
+        f"api.{os.environ.get('DOMAIN', 'localhost')}",
+    ]
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_PROD)}"
     # mysql+pymysql://db_user:db_pass@localhost/db_name
     # SERVER_NAME = "capysecurity.com"
@@ -28,6 +33,11 @@ class ProductionConfig(BaseConfig):
 class DevelopmentConfig(BaseConfig):
     api_env = "development"
     api_secret = "capybara"
+    origins = [
+        "http://localhost:5173",
+        f"admin.{os.environ.get('DOMAIN', 'localhost')}",
+        f"api.{os.environ.get('DOMAIN', 'localhost')}",
+    ]
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_DEV)}"
 
 

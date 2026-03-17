@@ -2,8 +2,10 @@ from api.api.dns import router as router_dns
 from api.api.auth import router as router_auth
 from api.api.metrics import router as router_metrics
 from api.api.system import router as router_system
+from api.api.setup import router as router_setup
 from api.configuration import api_conf
 from api.logging import setup_logging
+from api.database import get_database_fastapi, close_database
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,16 +19,16 @@ import logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-origins = [
-    "*",
-]
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("starting API...")
+    logger.info(f"origins: {str(api_conf.origins)}")
+    get_database_fastapi()
+    logger.info("Database connected and tables created")
     yield
     logger.info("stopping API...")
+    await close_database()
 
 
 api = FastAPI(
@@ -41,9 +43,10 @@ api.include_router(router_dns)
 api.include_router(router_auth)
 api.include_router(router_metrics)
 api.include_router(router_system)
+api.include_router(router_setup)
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=api_conf.origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

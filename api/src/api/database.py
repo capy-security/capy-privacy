@@ -147,3 +147,69 @@ async def close_database():
         database.close()
     else:
         logger.warning("Database connection already closed")
+
+
+def populate_database():
+    """
+    Populate the database with default data for first-time setup.
+
+    Reads DOMAIN and IP_ADDRESS from environment, then:
+    - Creates a client with IP_ADDRESS
+    - Creates categories: ads, adult, violence, gaming
+    - Creates one active domain test.{DOMAIN} (to verify filtering)
+    - Creates group "Admin" linked to all categories and the new client
+    """
+    # domain = os.environ.get("DOMAIN", "localhost")
+    ip_address = os.environ.get("IP_ADDRESS", "127.0.0.1")
+
+    if not get_database():
+        logger.error("Database not available, cannot populate")
+        raise OperationalError("Database not available")
+
+    with database.atomic():
+        # Client with IP_ADDRESS
+        client, _ = ClientDB.get_or_create(
+            ip=ip_address,
+            defaults={"name": "Admin client", "description": ""},
+        )
+        logger.info(f"Client: {client.name} ({client.ip})")
+
+        # Categories with descriptions
+        categories_data = [
+            ("ads", "Advertisement domains"),
+            ("adult", "Adult content"),
+            ("malware", "Malware domains"),
+            ("gaming", "Video games domains"),
+        ]
+        categories = []
+        for name, description in categories_data:
+            cat, _ = CategoryDB.get_or_create(
+                name=name,
+                defaults={"description": description},
+            )
+            categories.append(cat)
+        logger.info(f"Categories: {[c.name for c in categories]}")
+
+        # One active domain test.{DOMAIN} (to check filtering)
+        test_domain_name = "test.capysecurity.com"
+        DomainDB.get_or_create(
+            name=test_domain_name,
+            defaults={
+                "category": categories[0],
+                "isactive": True,
+                "ip": "127.0.0.1",
+            },
+        )
+        logger.info(f"Domain: {test_domain_name} (active)")
+
+        # Group "Admin": all categories + the client
+        group, _ = GroupDB.get_or_create(
+            name="Admin",
+            defaults={},
+        )
+        for cat in categories:
+            AssociationCategories.get_or_create(group=group, category=cat)
+        AssociationClients.get_or_create(group=group, client=client)
+        logger.info(
+            f"Group {group.name}: linked to {len(categories)} categories and client {client.ip}"
+        )

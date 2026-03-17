@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Path, Query, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing import Annotated, Dict, Any
 from api.database import tables, Tables, get_database_fastapi
 from api.load import load_ads_domains
@@ -246,15 +246,25 @@ async def create_object(
     if not model_class:
         raise HTTPException(status_code=404, detail=f"Table {table.value} not found")
 
+    # Validate input through the Pydantic model before touching the DB.
+    # This prevents rows being inserted when validation (e.g. IP/CIDR format) fails.
+    try:
+        create_data = {k: v for k, v in data.items() if k != "id"}
+        dummy = model_class(**create_data)
+        dummy.to_pydantic()
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception:
+        pass
+
     # Special handling for Group table which has many-to-many relationships
     if table.value == "group":
         # Extract association IDs (support both singular and plural field names)
         category_ids = data.get("category_ids") or data.get("categories_ids") or []
         client_ids = data.get("client_ids") or data.get("clients_ids") or []
 
-        # Create new instance from the provided data
         # Remove 'id' and association fields from data
-        create_data = {
+        group_data = {
             k: v
             for k, v in data.items()
             if k
@@ -262,7 +272,7 @@ async def create_object(
         }
 
         # Create the group
-        new_obj = model_class.create(**create_data)
+        new_obj = model_class.create(**group_data)
 
         # Create association records for categories
         for category_id in category_ids:
@@ -286,10 +296,6 @@ async def create_object(
 
     else:
         # Create new instance from the provided data
-        # Remove 'id' from data if present since it's auto-generated
-        create_data = {k: v for k, v in data.items() if k != "id"}
-
-        # Create the new object
         new_obj = model_class.create(**create_data)
 
     # Return the created object
@@ -451,6 +457,17 @@ async def update_object(
                 status_code=400,
                 detail=f"Field '{field_name}' does not exist in table '{table.value}'",
             )
+
+    # Validate through Pydantic before writing to DB
+    try:
+        existing = model_class.get(key_attr == key_value)
+        merged = {**{f.name: getattr(existing, f.name) for f in model_class._meta.fields.values()}, **update_data}
+        dummy = model_class(**merged)
+        dummy.to_pydantic()
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except model_class.DoesNotExist:
+        raise HTTPException(status_code=404, detail=f"Object with {key_field}={key_value} not found")
 
     # Update the object
     query = model_class.update(**update_data).where(key_attr == key_value)

@@ -1,14 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Annotated
 from api.database import get_database_fastapi, get_database_path
 from api.models.api import ApiResponse
 from api.security import check_authorization
+from fastapi import APIRouter, Depends, HTTPException
 from peewee import SqliteDatabase
+from typing import Annotated
+import asyncio
+import ipaddress
 import logging
 import os
+import platform
+import psutil
+import shutil
+import socket
 
 
 logger = logging.getLogger(__name__)
+
+# Minimal DNS query (A record for example.com) for UDP probe
+_DNS_QUERY_EXAMPLE_COM = (
+    b"\x00\x01\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+    b"\x07example\x03com\x00\x00\x01\x00\x01"
+)
+CORE_PROBE_TIMEOUT = 2.0
 
 
 router = APIRouter(
@@ -18,12 +31,131 @@ router = APIRouter(
 )
 
 
-@router.get("/info/")
-async def system_info():
+async def _probe_tcp(host: str, port: int) -> bool:
+    try:
+        await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=CORE_PROBE_TIMEOUT,
+        )
+        return True
+    except (OSError, asyncio.TimeoutError):
+        return False
+
+
+def _probe_udp_53(host: str) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(CORE_PROBE_TIMEOUT)
+            sock.sendto(_DNS_QUERY_EXAMPLE_COM, (host, 53))
+            sock.recvfrom(512)
+        return True
+    except (OSError, socket.timeout):
+        return False
+
+
+@router.get("/health/", response_model=ApiResponse)
+async def system_health() -> ApiResponse:
     """
-    Get system information
+    Probe capy_core DNS services (53/udp, 853/tcp, 5300/tcp) and return status.
+    Uses CORE_HOST env (default: capy_core) as target host.
     """
-    return {"status": "ok", "message": "server is up"}
+    host = os.environ.get("CORE_HOST", "capy_core")
+    loop = asyncio.get_event_loop()
+    udp53_ok = await loop.run_in_executor(None, _probe_udp_53, host)
+    tcp853_ok = await _probe_tcp(host, 853)
+    tcp5300_ok = await _probe_tcp(host, 5300)
+    all_ok = udp53_ok and tcp853_ok and tcp5300_ok
+    return ApiResponse(
+        success=True,
+        message="Core services OK" if all_ok else "One or more core probes failed",
+        data={
+            "host": host,
+            "53/udp": "up" if udp53_ok else "down",
+            "853/tcp": "up" if tcp853_ok else "down",
+            "5300/tcp": "up" if tcp5300_ok else "down",
+        },
+    )
+
+
+@router.get("/info/", response_model=ApiResponse)
+async def system_info() -> ApiResponse:
+    """
+    Return CPU, memory, architecture and disk usage in human-readable form.
+    """
+
+    def fmt(bytes_val: int) -> str:
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if bytes_val < 1024:
+                return f"{bytes_val:.1f} {unit}"
+            bytes_val /= 1024
+        return f"{bytes_val:.1f} PB"
+
+    mem = psutil.virtual_memory()
+    disk = shutil.disk_usage("/")
+
+    return ApiResponse(
+        success=True,
+        message="System information",
+        data={
+            "cpu": {
+                "cores_physical": psutil.cpu_count(logical=False),
+                "cores_logical": psutil.cpu_count(logical=True),
+                "usage_percent": psutil.cpu_percent(interval=0.5),
+            },
+            "memory": {
+                "total": fmt(mem.total),
+                "available": fmt(mem.available),
+                "used": fmt(mem.used),
+                "usage_percent": mem.percent,
+            },
+            "disk": {
+                "total": fmt(disk.total),
+                "free": fmt(disk.free),
+                "used": fmt(disk.used),
+                "usage_percent": round(disk.used / disk.total * 100, 1),
+            },
+            "architecture": {
+                "machine": platform.machine(),
+                "system": platform.system(),
+                "release": platform.release(),
+                "python": platform.python_version(),
+            },
+        },
+    )
+
+
+@router.get("/network/", response_model=ApiResponse)
+async def system_network() -> ApiResponse:
+    """
+    Return every network interface with its IP address and CIDR network.
+    Skips loopback and link-local addresses.
+    """
+    interfaces = []
+    for name, addrs in psutil.net_if_addrs().items():
+        for addr in addrs:
+            if addr.family != socket.AF_INET:
+                continue
+            ip = addr.address
+            netmask = addr.netmask
+            if not netmask:
+                continue
+            network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
+            if network.is_loopback or network.is_link_local:
+                continue
+            interfaces.append(
+                {
+                    "interface": name,
+                    "ip": ip,
+                    "netmask": netmask,
+                    "cidr": str(network),
+                }
+            )
+
+    return ApiResponse(
+        success=True,
+        message=f"{len(interfaces)} interface(s) found",
+        data={"interfaces": interfaces},
+    )
 
 
 @router.get("/database/size/")

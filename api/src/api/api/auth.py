@@ -36,6 +36,13 @@ async def get_user_token(
     """Check user login and password"""
     response = ApiResponse(success=False, message="", data={})
 
+    # check if user table is empty
+    if UserDB.select().count() == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No root admin user found. Please create one first (/login/create-admin)",
+        )
+
     # Verify email
     user: UserDB = UserDB.get_or_none(UserDB.email == login_data.email)
     if not user:
