@@ -24,6 +24,8 @@ services:
   capy_core:
     image: capy_core:latest
     restart: always
+    depends_on:
+      - capy_api
     volumes:
       - ./resources/database/:/var/capy/database/
       - ./resources/ssl/:/etc/ssl/
@@ -50,16 +52,23 @@ services:
   capy_front:
     image: capy_front:latest
     restart: always
+    depends_on:
+      - capy_api
+      - capy_core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       API_DOMAIN: api.${DOMAIN:-localhost}
       DNS_DOMAIN: dns.${DOMAIN:-localhost}
       ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
+      TLS_MODE: ${TLS_MODE:-off}
+      # Scheme prefixes: "http://" (local) or "" (production, Caddy defaults to HTTPS)
+      API_SCHEME: ${API_SCHEME:-http://}
+      ADMIN_SCHEME: ${ADMIN_SCHEME:-http://}
     volumes:
       - ./resources/ssl/:/etc/ssl/
-      - ./resources/caddy:/etc/caddy/custom/:ro
-      - ./resources/custom/:/var/capy/custom/ # custom website data
+      - ./resources/caddy/:/etc/caddy/custom/:ro
+      - ./resources/custom/:/var/capy/custom/
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
@@ -73,7 +82,7 @@ services:
         application: "admin"
         domain: "admin.${DOMAIN:-localhost}"
         ip_address: "${IP_ADDRESS:-127.0.0.1}"
-        VITE_API_URL: "https://api.${DOMAIN:-localhost}/"
+        VITE_API_URL: "${API_URL:-http://api.localhost/}"
       tags:
         - test
 
