@@ -2,11 +2,11 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createReadObjectDnsTableGet,
-		createCreateObjectDnsTablePost,
-		getReadObjectDnsTableGetQueryKey,
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
+		createListMetricsDatabaseMetricGet,
+		createListCategoriesDatabaseCategoryGet,
+		createCreateDomainDatabaseDomainPost,
+		getListMetricsDatabaseMetricGetQueryKey
+	} from '$lib/api/generated/database/database';
 	import type { ApiResponse } from '$lib/api/generated/models';
 	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import { ChevronLeft, ChevronRight, ArrowPath, Plus, XMark } from 'svelte-heros-v2';
@@ -29,8 +29,10 @@
 	let filterBlocked = $state<boolean | null>(null);
 	let filterBlockedString = $state<string>('all');
 
-	const categoriesQuery = createReadObjectDnsTableGet<{ items: Category[]; totalItems: number }>(
-		() => Tables.category,
+	const categoriesQuery = createListCategoriesDatabaseCategoryGet<{
+		items: Category[];
+		totalItems: number;
+	}>(
 		() => ({ page_number: 1, items_per_page: 1000 }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -39,8 +41,8 @@
 					parseTableResponse<Category>(
 						{ status: res.status, data: res.data as ApiResponse | undefined },
 						{ itemsPerPage: 1000, currentPage: 1 }
-					),
-			},
+					)
+			}
 		})
 	);
 	let allCategories = $derived(categoriesQuery.data?.items ?? []);
@@ -53,16 +55,36 @@
 			order_by: '-timestamp'
 		};
 		if (searchDomain.trim()) {
-			return { ...base, filter_field: 'domain', filter_value: searchDomain.trim(), filter_operator: 'like' };
+			return {
+				...base,
+				filter_field: 'domain',
+				filter_value: searchDomain.trim(),
+				filter_operator: 'like'
+			};
 		}
 		if (searchClientIp.trim()) {
-			return { ...base, filter_field: 'client_ip', filter_value: searchClientIp.trim(), filter_operator: 'like' };
+			return {
+				...base,
+				filter_field: 'client_ip',
+				filter_value: searchClientIp.trim(),
+				filter_operator: 'like'
+			};
 		}
 		if (filterCategory !== null) {
-			return { ...base, filter_field: 'category_id', filter_value: String(filterCategory), filter_operator: 'eq' };
+			return {
+				...base,
+				filter_field: 'category_id',
+				filter_value: String(filterCategory),
+				filter_operator: 'eq'
+			};
 		}
 		if (filterBlocked !== null) {
-			return { ...base, filter_field: 'blocked', filter_value: filterBlocked ? 'true' : 'false', filter_operator: 'eq' };
+			return {
+				...base,
+				filter_field: 'blocked',
+				filter_value: filterBlocked ? 'true' : 'false',
+				filter_operator: 'eq'
+			};
 		}
 		return base;
 	}
@@ -91,8 +113,7 @@
 		return items;
 	}
 
-	const metricsQuery = createReadObjectDnsTableGet<{ items: Metric[]; totalItems: number }>(
-		() => Tables.metric,
+	const metricsQuery = createListMetricsDatabaseMetricGet<{ items: Metric[]; totalItems: number }>(
 		() => getMetricParams(),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -104,10 +125,10 @@
 					);
 					return {
 						...parsed,
-						items: applyClientSideFilters(parsed.items),
+						items: applyClientSideFilters(parsed.items)
 					};
-				},
-			},
+				}
+			}
 		})
 	);
 
@@ -129,14 +150,14 @@
 		ip: '127.0.0.1'
 	});
 
-	const createDomainMutation = createCreateObjectDnsTablePost(() => ({
+	const createDomainMutation = createCreateDomainDatabaseDomainPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
-			},
-		},
+				queryClient.invalidateQueries({ queryKey: getListMetricsDatabaseMetricGetQueryKey() });
+			}
+		}
 	}));
 	let isCreating = $derived(createDomainMutation.isPending);
 	$effect(() => {
@@ -297,7 +318,6 @@
 		}
 		createError = null;
 		createDomainMutation.mutate({
-			table: Tables.domain,
 			data: {
 				name: trimmedName,
 				category_id: formData.category_id,
@@ -322,7 +342,6 @@
 			};
 		}
 	});
-
 </script>
 
 <div>

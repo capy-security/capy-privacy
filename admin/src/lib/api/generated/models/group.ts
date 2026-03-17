@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CreateObjectDnsTablePostBody = { [key: string]: unknown };
+export interface Group {
+  id?: number | null;
+  name: string;
+  categories_ids: number[];
+  clients_ids: number[];
+}

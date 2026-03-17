@@ -6,4 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateObjectDnsTablePutBody = { [key: string]: unknown };
+export type DeleteStatisticDatabaseStatisticDeleteParams = {
+id?: number;
+};

@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DeleteObjectDnsTableDeleteParams = {
-/**
- * @pattern ^[a-zA-Z0-9_-]+$
- */
-key_field?: string;
-key_value?: string;
+export type DeleteUserDatabaseUserDeleteParams = {
+id?: number;
 };

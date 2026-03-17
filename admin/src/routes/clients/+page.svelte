@@ -2,18 +2,13 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createReadObjectDnsTableGet,
-		createCreateObjectDnsTablePost,
-		createUpdateObjectDnsTablePut,
-		createDeleteObjectDnsTableDelete,
-		getReadObjectDnsTableGetQueryKey,
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
-	import type {
-		ApiResponse,
-		CreateObjectDnsTablePostBody,
-		UpdateObjectDnsTablePutBody
-	} from '$lib/api/generated/models';
+		createListClientsDatabaseClientGet,
+		createCreateClientDatabaseClientPost,
+		createUpdateClientDatabaseClientPut,
+		createDeleteClientDatabaseClientDelete,
+		getListClientsDatabaseClientGetQueryKey,
+	} from '$lib/api/generated/database/database';
+	import type { ApiResponse } from '$lib/api/generated/models';
 	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import { ChevronLeft, ChevronRight, Plus, XMark, PencilSquare, Trash } from 'svelte-heros-v2';
 	import type { Client, ClientFormData } from '$lib/models/client';
@@ -24,8 +19,7 @@
 	let itemsPerPage = $state(12);
 
 	const validClient = (c: Client) => !!(c.ip && typeof c.ip === 'string' && c.ip.trim().length > 0);
-	const tableQuery = createReadObjectDnsTableGet<{ items: Client[]; totalItems: number }>(
-		() => Tables.client,
+	const tableQuery = createListClientsDatabaseClientGet<{ items: Client[]; totalItems: number }>(
 		() => ({ page_number: currentPage, items_per_page: itemsPerPage }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -61,12 +55,12 @@
 		description: ''
 	});
 
-	const createClientMutation = createCreateObjectDnsTablePost(() => ({
+	const createClientMutation = createCreateClientDatabaseClientPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListClientsDatabaseClientGetQueryKey() });
 			},
 		},
 	}));
@@ -85,12 +79,12 @@
 		description: ''
 	});
 
-	const updateClientMutation = createUpdateObjectDnsTablePut(() => ({
-		request: { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' } },
+	const updateClientMutation = createUpdateClientDatabaseClientPut(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeEditModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListClientsDatabaseClientGetQueryKey() });
 			},
 		},
 	}));
@@ -104,12 +98,12 @@
 	let deleteError = $state<string | null>(null);
 	let clientToDelete = $state<Client | null>(null);
 
-	const deleteClientMutation = createDeleteObjectDnsTableDelete(() => ({
+	const deleteClientMutation = createDeleteClientDatabaseClientDelete(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeDeleteModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListClientsDatabaseClientGetQueryKey() });
 			},
 		},
 	}));
@@ -227,17 +221,14 @@
 			createError = 'IP address is required';
 			return;
 		}
-		const payload: CreateObjectDnsTablePostBody = { ip: trimmedIp };
-		const trimmedName = formData.name?.trim();
-		if (trimmedName?.length) payload.name = trimmedName;
-		const trimmedDescription = formData.description?.trim();
-		if (trimmedDescription?.length) payload.description = trimmedDescription;
-		if (!payload.ip || typeof payload.ip !== 'string' || payload.ip.length === 0) {
-			createError = 'IP address must be a non-empty string';
-			return;
-		}
 		createError = null;
-		createClientMutation.mutate({ table: Tables.client, data: payload });
+		createClientMutation.mutate({
+			data: {
+				ip: trimmedIp,
+				name: formData.name?.trim() || '',
+				description: formData.description?.trim() || '',
+			}
+		});
 	}
 
 	function handleUpdateClient() {
@@ -250,21 +241,14 @@
 			updateError = 'IP address is required';
 			return;
 		}
-		const payload: UpdateObjectDnsTablePutBody = {
-			id: editingClient.id,
-			ip: trimmedIp,
-			name: editFormData.name?.trim() || null,
-			description: editFormData.description?.trim() || null,
-		};
-		if (!payload.ip || typeof payload.ip !== 'string' || payload.ip.length === 0) {
-			updateError = 'IP address must be a non-empty string';
-			return;
-		}
 		updateError = null;
 		updateClientMutation.mutate({
-			table: Tables.client,
-			data: payload,
-			params: { key_field: 'id' },
+			data: {
+				id: editingClient.id,
+				ip: trimmedIp,
+				name: editFormData.name?.trim() || '',
+				description: editFormData.description?.trim() || '',
+			}
 		});
 	}
 
@@ -274,10 +258,7 @@
 			return;
 		}
 		deleteError = null;
-		deleteClientMutation.mutate({
-			table: Tables.client,
-			params: { key_field: 'id', key_value: clientToDelete.id.toString() },
-		});
+		deleteClientMutation.mutate({ params: { id: clientToDelete.id } });
 	}
 
 	// Close modals on Escape key

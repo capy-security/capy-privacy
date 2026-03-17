@@ -2,13 +2,14 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createReadObjectDnsTableGet,
-		createCreateObjectDnsTablePost,
-		createUpdateObjectDnsTablePut,
-		createDeleteObjectDnsTableDelete,
-		getReadObjectDnsTableGetQueryKey,
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
+		createListGroupsDatabaseGroupGet,
+		createListCategoriesDatabaseCategoryGet,
+		createListClientsDatabaseClientGet,
+		createCreateGroupDatabaseGroupPost,
+		createUpdateGroupDatabaseGroupPut,
+		createDeleteGroupDatabaseGroupDelete,
+		getListGroupsDatabaseGroupGetQueryKey,
+	} from '$lib/api/generated/database/database';
 	import type { ApiResponse } from '$lib/api/generated/models';
 	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import { ChevronLeft, ChevronRight, Plus, XMark, PencilSquare, Trash } from 'svelte-heros-v2';
@@ -23,8 +24,7 @@
 
 	const validClient = (c: Client) => !!(c.ip && typeof c.ip === 'string' && c.ip.trim().length > 0);
 
-	const categoriesQuery = createReadObjectDnsTableGet<{ items: Category[]; totalItems: number }>(
-		() => Tables.category,
+	const categoriesQuery = createListCategoriesDatabaseCategoryGet<{ items: Category[]; totalItems: number }>(
 		() => ({ page_number: 1, items_per_page: 1000 }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -39,8 +39,7 @@
 	);
 	let allCategories = $derived(categoriesQuery.data?.items ?? []);
 
-	const clientsQuery = createReadObjectDnsTableGet<{ items: Client[]; totalItems: number }>(
-		() => Tables.client,
+	const clientsQuery = createListClientsDatabaseClientGet<{ items: Client[]; totalItems: number }>(
 		() => ({ page_number: 1, items_per_page: 1000 }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -80,8 +79,7 @@
 		return [];
 	}
 
-	const groupsQuery = createReadObjectDnsTableGet<{ items: Group[]; totalItems: number }>(
-		() => Tables.group,
+	const groupsQuery = createListGroupsDatabaseGroupGet<{ items: Group[]; totalItems: number }>(
 		() => ({ page_number: currentPage, items_per_page: itemsPerPage }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -122,12 +120,12 @@
 		clients_ids: []
 	});
 
-	const createGroupMutation = createCreateObjectDnsTablePost(() => ({
+	const createGroupMutation = createCreateGroupDatabaseGroupPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListGroupsDatabaseGroupGetQueryKey() });
 			},
 		},
 	}));
@@ -146,12 +144,12 @@
 		clients_ids: []
 	});
 
-	const updateGroupMutation = createUpdateObjectDnsTablePut(() => ({
-		request: { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' } },
+	const updateGroupMutation = createUpdateGroupDatabaseGroupPut(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeEditModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListGroupsDatabaseGroupGetQueryKey() });
 			},
 		},
 	}));
@@ -165,12 +163,12 @@
 	let deleteError = $state<string | null>(null);
 	let groupToDelete = $state<Group | null>(null);
 
-	const deleteGroupMutation = createDeleteObjectDnsTableDelete(() => ({
+	const deleteGroupMutation = createDeleteGroupDatabaseGroupDelete(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeDeleteModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListGroupsDatabaseGroupGetQueryKey() });
 			},
 		},
 	}));
@@ -330,11 +328,11 @@
 		}
 		createError = null;
 		const payload = {
-			...(formData.name?.trim() && { name: formData.name.trim() }),
+			name: formData.name?.trim() || '',
 			categories_ids: formData.categories_ids || [],
 			clients_ids: formData.clients_ids || []
 		};
-		createGroupMutation.mutate({ table: Tables.group, data: payload });
+		createGroupMutation.mutate({ data: payload });
 	}
 
 	function handleUpdateGroup() {
@@ -344,14 +342,12 @@
 		}
 		updateError = null;
 		updateGroupMutation.mutate({
-			table: Tables.group,
 			data: {
 				id: editingGroup.id,
-				name: editFormData.name?.trim() || null,
+				name: editFormData.name?.trim() || '',
 				categories_ids: editFormData.categories_ids || [],
 				clients_ids: editFormData.clients_ids || []
-			},
-			params: { key_field: 'id' }
+			}
 		});
 	}
 
@@ -361,10 +357,7 @@
 			return;
 		}
 		deleteError = null;
-		deleteGroupMutation.mutate({
-			table: Tables.group,
-			params: { key_field: 'id', key_value: groupToDelete.id.toString() }
-		});
+		deleteGroupMutation.mutate({ params: { id: groupToDelete.id } });
 	}
 
 	// Close modals on Escape key

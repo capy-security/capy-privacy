@@ -6,9 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateObjectDnsTablePutParams = {
-/**
- * @pattern ^[a-zA-Z0-9_-]+$
- */
-key_field?: string;
+export type DeleteClientDatabaseClientDeleteParams = {
+id?: number;
 };

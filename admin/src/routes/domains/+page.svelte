@@ -2,19 +2,15 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createReadObjectDnsTableGet,
-		createCreateObjectDnsTablePost,
-		createUpdateObjectDnsTablePut,
-		createDeleteObjectDnsTableDelete,
-		getReadObjectDnsTableGetQueryKey,
-		updateAdsDnsAdsGet
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
-	import type {
-		ApiResponse,
-		CreateObjectDnsTablePostBody,
-		UpdateObjectDnsTablePutBody
-	} from '$lib/api/generated/models';
+		createListDomainsDatabaseDomainGet,
+		createListCategoriesDatabaseCategoryGet,
+		createCreateDomainDatabaseDomainPost,
+		createUpdateDomainDatabaseDomainPut,
+		createDeleteDomainDatabaseDomainDelete,
+		getListDomainsDatabaseDomainGetQueryKey,
+	} from '$lib/api/generated/database/database';
+	import { updateCategorySetupUpdateCategoryGet } from '$lib/api/generated/setup/setup';
+	import type { ApiResponse } from '$lib/api/generated/models';
 	import {
 		ChevronLeft,
 		ChevronRight,
@@ -42,8 +38,7 @@
 	let filterStatusString = $state<string>('all');
 
 	// Categories for dropdown (all, one page)
-	const categoriesQuery = createReadObjectDnsTableGet<{ items: Category[]; totalItems: number }>(
-		() => Tables.category,
+	const categoriesQuery = createListCategoriesDatabaseCategoryGet<{ items: Category[]; totalItems: number }>(
 		() => ({ page_number: 1, items_per_page: 1000 }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -86,8 +81,7 @@
 		};
 	}
 
-	const domainsQuery = createReadObjectDnsTableGet<{ items: Domain[]; totalItems: number }>(
-		() => Tables.domain,
+	const domainsQuery = createListDomainsDatabaseDomainGet<{ items: Domain[]; totalItems: number }>(
 		() => getDomainParams(),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -119,12 +113,12 @@
 		ip: '127.0.0.1'
 	});
 
-	const createDomainMutation = createCreateObjectDnsTablePost(() => ({
+	const createDomainMutation = createCreateDomainDatabaseDomainPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListDomainsDatabaseDomainGetQueryKey() });
 			},
 		},
 	}));
@@ -144,12 +138,12 @@
 		ip: '127.0.0.1'
 	});
 
-	const updateDomainMutation = createUpdateObjectDnsTablePut(() => ({
-		request: { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' } },
+	const updateDomainMutation = createUpdateDomainDatabaseDomainPut(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeEditModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListDomainsDatabaseDomainGetQueryKey() });
 			},
 		},
 	}));
@@ -163,12 +157,12 @@
 	let deleteError = $state<string | null>(null);
 	let domainToDelete = $state<Domain | null>(null);
 
-	const deleteDomainMutation = createDeleteObjectDnsTableDelete(() => ({
+	const deleteDomainMutation = createDeleteDomainDatabaseDomainDelete(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeDeleteModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListDomainsDatabaseDomainGetQueryKey() });
 			},
 		},
 	}));
@@ -321,26 +315,26 @@
 		updateAdsSuccess = false;
 
 		try {
-			const response = await updateAdsDnsAdsGet({
+			const response = await updateCategorySetupUpdateCategoryGet('ads', {
 				headers: {
 					Authorization: `Bearer ${user.token}`
 				}
 			});
 
 			if (response.status === 200 && response.data) {
-				const apiResponse = response.data as ApiResponse;
-				if (apiResponse.success) {
+				const data = response.data as { status?: string; message?: string };
+				if (data.status === 'ok') {
 					updateAdsSuccess = true;
-					queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(Tables.domain) });
+					queryClient.invalidateQueries({ queryKey: getListDomainsDatabaseDomainGetQueryKey() });
 					setTimeout(() => {
 						updateAdsSuccess = false;
 					}, 3000);
 				} else {
-					updateAdsError = getErrorMessage(apiResponse, 'Failed to update ads domains');
+					updateAdsError = data.message ?? 'Failed to update ads domains';
 				}
 			} else {
-				const errorResponse = response.data as ApiResponse | undefined;
-				updateAdsError = getErrorMessage(errorResponse, 'Failed to update ads domains');
+				const errorResponse = response.data as { message?: string } | undefined;
+				updateAdsError = errorResponse?.message ?? 'Failed to update ads domains';
 			}
 		} catch (err) {
 			console.error('Error updating ads domains:', err);
@@ -424,7 +418,6 @@
 		}
 		createError = null;
 		createDomainMutation.mutate({
-			table: Tables.domain,
 			data: {
 				name: trimmedName,
 				category_id: formData.category_id,
@@ -450,15 +443,13 @@
 		}
 		updateError = null;
 		updateDomainMutation.mutate({
-			table: Tables.domain,
 			data: {
 				id: editingDomain.id,
 				name: trimmedName,
 				category_id: editFormData.category_id,
 				isactive: editFormData.isactive,
 				ip: editFormData.ip || '127.0.0.1'
-			},
-			params: { key_field: 'id' }
+			}
 		});
 	}
 
@@ -468,10 +459,7 @@
 			return;
 		}
 		deleteError = null;
-		deleteDomainMutation.mutate({
-			table: Tables.domain,
-			params: { key_field: 'id', key_value: domainToDelete.id.toString() }
-		});
+		deleteDomainMutation.mutate({ params: { id: domainToDelete.id } });
 	}
 
 	// Close modals on Escape key

@@ -6,24 +6,19 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ReadObjectDnsTableGetParams = {
+export type ListUsersDatabaseUserGetParams = {
 /**
  * @minimum 0
  */
 page_number?: number;
 /**
  * @minimum 1
+ * @maximum 1000
  */
 items_per_page?: number;
-/**
- * @pattern ^[a-zA-Z0-9_-]+$
- */
-order_by?: string;
-/**
- * @pattern ^[a-zA-Z0-9_-]+$
- */
-filter_field?: string;
-filter_value?: string;
+order_by?: string | null;
+filter_field?: string | null;
+filter_value?: string | null;
 /**
  * @pattern ^(eq|ne|gt|lt|gte|lte|like|in)$
  */

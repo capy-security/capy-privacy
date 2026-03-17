@@ -2,18 +2,13 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createReadObjectDnsTableGet,
-		createCreateObjectDnsTablePost,
-		createUpdateObjectDnsTablePut,
-		createDeleteObjectDnsTableDelete,
-		getReadObjectDnsTableGetQueryKey,
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
-	import type {
-		ApiResponse,
-		CreateObjectDnsTablePostBody,
-		UpdateObjectDnsTablePutBody
-	} from '$lib/api/generated/models';
+		createListCategoriesDatabaseCategoryGet,
+		createCreateCategoryDatabaseCategoryPost,
+		createUpdateCategoryDatabaseCategoryPut,
+		createDeleteCategoryDatabaseCategoryDelete,
+		getListCategoriesDatabaseCategoryGetQueryKey,
+	} from '$lib/api/generated/database/database';
+	import type { ApiResponse } from '$lib/api/generated/models';
 	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import { ChevronLeft, ChevronRight, Plus, PencilSquare, Trash, XMark } from 'svelte-heros-v2';
 	import type { Category, CategoryFormData } from '$lib/models/category';
@@ -23,8 +18,7 @@
 	let currentPage = $state(1);
 	let itemsPerPage = $state(12);
 
-	const tableQuery = createReadObjectDnsTableGet<{ items: Category[]; totalItems: number }>(
-		() => Tables.category,
+	const tableQuery = createListCategoriesDatabaseCategoryGet<{ items: Category[]; totalItems: number }>(
 		() => ({ page_number: currentPage, items_per_page: itemsPerPage }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -54,12 +48,12 @@
 		description: ''
 	});
 
-	const createCategoryMutation = createCreateObjectDnsTablePost(() => ({
+	const createCategoryMutation = createCreateCategoryDatabaseCategoryPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListCategoriesDatabaseCategoryGetQueryKey() });
 			},
 		},
 	}));
@@ -77,12 +71,12 @@
 		description: ''
 	});
 
-	const updateCategoryMutation = createUpdateObjectDnsTablePut(() => ({
-		request: { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' } },
+	const updateCategoryMutation = createUpdateCategoryDatabaseCategoryPut(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeEditModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListCategoriesDatabaseCategoryGetQueryKey() });
 			},
 		},
 	}));
@@ -96,12 +90,12 @@
 	let deleteError = $state<string | null>(null);
 	let categoryToDelete = $state<Category | null>(null);
 
-	const deleteCategoryMutation = createDeleteObjectDnsTableDelete(() => ({
+	const deleteCategoryMutation = createDeleteCategoryDatabaseCategoryDelete(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
-			onSuccess: (_, variables) => {
+			onSuccess: () => {
 				closeDeleteModal();
-				queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(variables.table) });
+				queryClient.invalidateQueries({ queryKey: getListCategoriesDatabaseCategoryGetQueryKey() });
 			},
 		},
 	}));
@@ -220,11 +214,11 @@
 		}
 		createError = null;
 		const trimmedDescription = formData.description?.trim();
-		const payload: CreateObjectDnsTablePostBody = {
+		const payload = {
 			name: trimmedName,
-			...(trimmedDescription && { description: trimmedDescription }),
+			...(trimmedDescription ? { description: trimmedDescription } : {}),
 		};
-		createCategoryMutation.mutate({ table: Tables.category, data: payload });
+		createCategoryMutation.mutate({ data: payload });
 	}
 
 	function handleUpdateCategory() {
@@ -239,12 +233,13 @@
 		}
 		updateError = null;
 		const trimmedDescription = editFormData.description?.trim();
-		const payload: UpdateObjectDnsTablePutBody = {
-			id: editingCategory.id,
-			name: trimmedName,
-			description: trimmedDescription ? trimmedDescription : null,
-		};
-		updateCategoryMutation.mutate({ table: Tables.category, data: payload, params: { key_field: 'id' } });
+		updateCategoryMutation.mutate({
+			data: {
+				id: editingCategory.id,
+				name: trimmedName,
+				description: trimmedDescription || '',
+			}
+		});
 	}
 
 	function handleDeleteCategory() {
@@ -254,11 +249,7 @@
 		}
 		deleteError = null;
 		deleteCategoryMutation.mutate({
-			table: Tables.category,
-			params: {
-				key_field: 'id',
-				key_value: categoryToDelete.id.toString(),
-			},
+			params: { id: categoryToDelete.id },
 		});
 	}
 

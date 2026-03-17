@@ -8,10 +8,9 @@
 		deleteUserAuthUserDelete
 	} from '$lib/api/generated/authentication/authentication';
 	import {
-		createReadObjectDnsTableGet,
-		getReadObjectDnsTableGetQueryKey
-	} from '$lib/api/generated/dns/dns';
-	import { Tables } from '$lib/api/generated/models';
+		createListUsersDatabaseUserGet,
+		getListUsersDatabaseUserGetQueryKey
+	} from '$lib/api/generated/database/database';
 	import type {
 		ApiResponse,
 		UserRequest,
@@ -28,8 +27,7 @@
 	let currentPage = $state(1);
 	let itemsPerPage = $state(12);
 
-	const usersQuery = createReadObjectDnsTableGet<{ items: User[]; totalItems: number }>(
-		() => Tables.user,
+	const usersQuery = createListUsersDatabaseUserGet<{ items: User[]; totalItems: number }>(
 		() => ({ page_number: currentPage, items_per_page: itemsPerPage }),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
@@ -38,8 +36,8 @@
 					parseTableResponse<User>(
 						{ status: res.status, data: res.data as ApiResponse | undefined },
 						{ itemsPerPage, currentPage }
-					),
-			},
+					)
+			}
 		})
 	);
 
@@ -81,7 +79,7 @@
 	let userToDelete = $state<User | null>(null);
 
 	function invalidateUsersList() {
-		queryClient.invalidateQueries({ queryKey: getReadObjectDnsTableGetQueryKey(Tables.user) });
+		queryClient.invalidateQueries({ queryKey: getListUsersDatabaseUserGetQueryKey() });
 	}
 
 	function goToPage(page: number) {
@@ -249,7 +247,7 @@
 				role: formData.role as UserRole
 			};
 
-			console.log('Creating user with payload:', JSON.stringify(payload, null, 2));
+			// console.log('Creating user with payload:', JSON.stringify(payload, null, 2));
 
 			const response = await createUserAuthUserPost(payload as GeneratedUser, {
 				headers: {
@@ -406,7 +404,6 @@
 			};
 		}
 	});
-
 </script>
 
 <div>
