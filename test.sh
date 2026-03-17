@@ -36,7 +36,10 @@ DOMAIN="${DOMAIN:-localhost}"
 IP_ADDRESS="${IP_ADDRESS:-127.0.0.1}"
 
 # Domains to resolve (used for recursor and dnsdist)
-TEST_DOMAINS=(example.com google.com cloudflare.com)
+TEST_DOMAINS=(example.com google.com cloudflare.com test.capysecurity.com)
+# Filtering check: this domain must resolve to 127.0.0.1 (in DB by default)
+FILTER_DOMAIN="test.capysecurity.com"
+FILTER_EXPECTED_IP="127.0.0.1"
 
 echo "Using DOMAIN=$DOMAIN IP_ADDRESS=$IP_ADDRESS"
 echo "---"
@@ -47,8 +50,18 @@ RECURSOR_OK=0
 RECURSOR_FAIL=0
 for d in "${TEST_DOMAINS[@]}"; do
   if result=$(dig +short +time=2 +tries=1 "@${IP_ADDRESS}" -p 53 "$d" A 2>/dev/null) && [[ -n "$result" ]]; then
-    echo "  OK   $d -> $result"
-    ((RECURSOR_OK++)) || true
+    if [[ "$d" == "$FILTER_DOMAIN" ]]; then
+      if [[ "$result" == *"$FILTER_EXPECTED_IP"* ]]; then
+        echo "  OK   $d -> $result (filtering)"
+        ((RECURSOR_OK++)) || true
+      else
+        echo "  FAIL $d -> $result (expected $FILTER_EXPECTED_IP for filtering)"
+        ((RECURSOR_FAIL++)) || true
+      fi
+    else
+      echo "  OK   $d -> $result"
+      ((RECURSOR_OK++)) || true
+    fi
   else
     echo "  FAIL $d (no answer or timeout)"
     ((RECURSOR_FAIL++)) || true
@@ -88,8 +101,18 @@ if ! command -v kdig &>/dev/null; then
 else
   for d in "${TEST_DOMAINS[@]}"; do
     if result=$(kdig +short +time=2 "@${IP_ADDRESS}" +tls -p 853 "$d" A 2>/dev/null) && [[ -n "$result" ]]; then
-      echo "  OK   $d -> $result"
-      ((DOT_OK++)) || true
+      if [[ "$d" == "$FILTER_DOMAIN" ]]; then
+        if [[ "$result" == *"$FILTER_EXPECTED_IP"* ]]; then
+          echo "  OK   $d -> $result (filtering)"
+          ((DOT_OK++)) || true
+        else
+          echo "  FAIL $d -> $result (expected $FILTER_EXPECTED_IP for filtering)"
+          ((DOT_FAIL++)) || true
+        fi
+      else
+        echo "  OK   $d -> $result"
+        ((DOT_OK++)) || true
+      fi
     else
       echo "  FAIL $d (no answer or timeout)"
       ((DOT_FAIL++)) || true
