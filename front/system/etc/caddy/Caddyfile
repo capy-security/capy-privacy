@@ -97,12 +97,7 @@
 	root * /var/capy/admin
 
 	handle /dns-query {
-		reverse_proxy capy_core:5300 {
-			transport http {
-				read_timeout 10s
-				write_timeout 10s
-			}
-		}
+		import /etc/caddy/doh_proxy_{$TLS_MODE:off}.conf
 	}
 }
 
