@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
-from api.database import get_database_fastapi
+from api.database import get_database_fastapi, populate_database
 from api.models.user import (
     UserDB,
     User,
@@ -75,21 +75,24 @@ async def create_admin(
 ) -> ApiResponse:
     """Create a new admin user"""
     response = ApiResponse(
-        success=True, message="Root Admin user created successfully", data={}
+        success=True, message="Root Admin user created and database populated", data={}
     )
 
     # check if user table is empty
     if UserDB.select().count() == 0:
-        logger.info("Creating Root Admin user")
+
         if not admin_request.password:
             raise HTTPException(
                 status_code=400,
                 detail="Password is required to create a root admin user",
             )
+        logger.info("Creating Root Admin user")
         # Create the first user as admin
         new_user = UserDB.from_pydantic(admin_request)
         new_user.role = UserRole.ADMIN
         new_user.save()
+        logger.info("Populating database with default data")
+        populate_database()
     else:
         response.success = False
         response.message = "Root Admin user already exists"

@@ -1,5 +1,5 @@
-from api.api.dns import router as router_dns
 from api.api.auth import router as router_auth
+from api.api.database import router as router_database
 from api.api.metrics import router as router_metrics
 from api.api.system import router as router_system
 from api.api.setup import router as router_setup
@@ -39,8 +39,8 @@ api = FastAPI(
 )
 
 
-api.include_router(router_dns)
 api.include_router(router_auth)
+api.include_router(router_database)
 api.include_router(router_metrics)
 api.include_router(router_system)
 api.include_router(router_setup)

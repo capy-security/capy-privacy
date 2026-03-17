@@ -14,7 +14,6 @@ ADMIN_ONLY_FUNCTIONS = {
     "create_user",
     "update_user",
     "delete_user",
-    "update_ads",
     "create_object",
     "read_object",
     "update_object",
@@ -24,8 +23,10 @@ ADMIN_ONLY_FUNCTIONS = {
 # Functions that require any authenticated user
 AUTHENTICATED_FUNCTIONS = {}
 
-# Functions that require any authenticated user
-UNAUTHENTICATED_FUNCTIONS = {}
+# Functions that are not authenticated
+UNAUTHENTICATED_FUNCTIONS = {
+    "create_admin",
+}
 
 
 async def check_authorization(
@@ -114,8 +115,8 @@ async def check_authorization(
         elif function_name in AUTHENTICATED_FUNCTIONS:
             # Any authenticated user can access
             pass
-        # If function is not in the list, allow by default (or you can change this behavior)
-        # For security, you might want to require authentication by default
+        # If function is not in the list, allow by default
+        # IMPORTANT For security --> require authentication by default
 
     return decoded_token
 
