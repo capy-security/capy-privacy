@@ -18,7 +18,7 @@ RUN corepack enable yarn \
     && yarn install --frozen-lockfile
 
 # Build-time API URL (Vite embeds this)
-ARG VITE_API_URL=https://api.localhost/
+ARG VITE_API_URL=http://api.localhost/
 ENV VITE_API_URL=${VITE_API_URL}
 
 RUN yarn build
