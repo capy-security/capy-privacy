@@ -1,7 +1,8 @@
-- use pydantic-settings for api
-- use multi stage docker build
-- fix permissions and users for containers
-- schedule databse cleaning
-- schedule adblock list updates
-- RPZ / NXDOMAIN
-- improve authentication and authorization
+- [ ] use pydantic-settings for api
+- [x] use multi stage docker build (x)
+- [ ] fix permissions and users for containers
+- [ ] schedule databse cleaning
+- [ ] schedule adblock list updates
+- [ ] RPZ / NXDOMAIN
+- [ ] improve authentication and authorization
+- [ ] Simplify the dns router for tables CRUD (maybe one endpoint per table instead generic {table})
