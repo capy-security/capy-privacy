@@ -176,21 +176,7 @@
 				</a>
 			</li>
 
-			<!-- Users -->
-			<li>
-				<a
-					href="/users"
-					class="flex items-center rounded-md py-2 text-white transition-colors {isExpanded
-						? 'md:justify-start md:px-3'
-						: ''} justify-center px-0 {isUsersActive ? 'bg-white/10' : 'hover:bg-white/10'}"
-					title="Users"
-				>
-					<Users class="h-6 w-6 flex-shrink-0" />
-					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap">Users</span>
-				</a>
-			</li>
-
-			<!-- Metrics -->
+				<!-- Metrics -->
 			<li>
 				<a
 					href="/metrics"
@@ -223,17 +209,17 @@
 
 		<!-- Bottom Section -->
 		<ul class="mt-auto flex flex-col space-y-1 border-t border-white/20 px-2 pt-2">
-			<!-- Profile -->
+			<!-- Users -->
 			<li>
 				<a
-					href="/profile"
+					href="/users"
 					class="flex items-center rounded-md py-2 text-white transition-colors {isExpanded
 						? 'md:justify-start md:px-3'
-						: ''} justify-center px-0 {isProfileActive ? 'bg-white/10' : 'hover:bg-white/10'}"
-					title="Profile"
+						: ''} justify-center px-0 {isUsersActive ? 'bg-white/10' : 'hover:bg-white/10'}"
+					title="Users"
 				>
-					<UserCircle class="h-6 w-6 flex-shrink-0" />
-					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap">Profile</span>
+					<Users class="h-6 w-6 flex-shrink-0" />
+					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap">Users</span>
 				</a>
 			</li>
 
@@ -250,6 +236,20 @@
 					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap"
 						>Configuration</span
 					>
+				</a>
+			</li>
+
+			<!-- Profile -->
+			<li>
+				<a
+					href="/profile"
+					class="flex items-center rounded-md py-2 text-white transition-colors {isExpanded
+						? 'md:justify-start md:px-3'
+						: ''} justify-center px-0 {isProfileActive ? 'bg-white/10' : 'hover:bg-white/10'}"
+					title="Profile"
+				>
+					<UserCircle class="h-6 w-6 flex-shrink-0" />
+					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap">Profile</span>
 				</a>
 			</li>
 		</ul>

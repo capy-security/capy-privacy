@@ -30,11 +30,120 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Get system information
+ * Probe capy_core DNS services (53/udp, 853/tcp, 5300/tcp) and return status.
+Uses CORE_HOST env (default: capy_core) as target host.
+ * @summary System Health
+ */
+export type systemHealthSystemHealthGetResponse200 = {
+  data: ApiResponse
+  status: 200
+}
+
+export type systemHealthSystemHealthGetResponse404 = {
+  data: void
+  status: 404
+}
+
+export type systemHealthSystemHealthGetResponseSuccess = (systemHealthSystemHealthGetResponse200) & {
+  headers: Headers;
+};
+export type systemHealthSystemHealthGetResponseError = (systemHealthSystemHealthGetResponse404) & {
+  headers: Headers;
+};
+
+export type systemHealthSystemHealthGetResponse = (systemHealthSystemHealthGetResponseSuccess | systemHealthSystemHealthGetResponseError)
+
+export const getSystemHealthSystemHealthGetUrl = () => {
+
+
+  
+
+  return `/system/health/`
+}
+
+export const systemHealthSystemHealthGet = async ( options?: RequestInit): Promise<systemHealthSystemHealthGetResponse> => {
+  
+  return fetchApi<systemHealthSystemHealthGetResponse>(getSystemHealthSystemHealthGetUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getSystemHealthSystemHealthGetQueryKey = () => {
+    return [
+    `/system/health/`
+    ] as const;
+    }
+
+    
+export const getSystemHealthSystemHealthGetQueryOptions = <TData = Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError = void>( options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSystemHealthSystemHealthGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>> = ({ signal }) => systemHealthSystemHealthGet({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as CreateQueryOptions<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SystemHealthSystemHealthGetQueryResult = NonNullable<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>>
+export type SystemHealthSystemHealthGetQueryError = void
+
+
+/**
+ * @summary System Health
+ */
+
+export function createSystemHealthSystemHealthGet<TData = Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError = void>(
+  options?: () => { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+ , queryClient?: () => QueryClient 
+ ): CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  
+
+  const query = createQuery(() => getSystemHealthSystemHealthGetQueryOptions(options?.()), queryClient) as CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return query
+}
+
+/**
+ * @summary System Health
+ */
+export const prefetchSystemHealthSystemHealthGetQuery = async <TData = Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError = void>(
+ queryClient: QueryClient,  options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemHealthSystemHealthGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+
+  ): Promise<QueryClient> => {
+
+  const queryOptions = getSystemHealthSystemHealthGetQueryOptions(options)
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+}
+
+
+
+/**
+ * Return CPU, memory, architecture and disk usage in human-readable form.
  * @summary System Info
  */
 export type systemInfoSystemInfoGetResponse200 = {
-  data: unknown
+  data: ApiResponse
   status: 200
 }
 
@@ -129,6 +238,115 @@ export const prefetchSystemInfoSystemInfoGetQuery = async <TData = Awaited<Retur
   ): Promise<QueryClient> => {
 
   const queryOptions = getSystemInfoSystemInfoGetQueryOptions(options)
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+}
+
+
+
+/**
+ * Return every network interface with its IP address and CIDR network.
+Skips loopback and link-local addresses.
+ * @summary System Network
+ */
+export type systemNetworkSystemNetworkGetResponse200 = {
+  data: ApiResponse
+  status: 200
+}
+
+export type systemNetworkSystemNetworkGetResponse404 = {
+  data: void
+  status: 404
+}
+
+export type systemNetworkSystemNetworkGetResponseSuccess = (systemNetworkSystemNetworkGetResponse200) & {
+  headers: Headers;
+};
+export type systemNetworkSystemNetworkGetResponseError = (systemNetworkSystemNetworkGetResponse404) & {
+  headers: Headers;
+};
+
+export type systemNetworkSystemNetworkGetResponse = (systemNetworkSystemNetworkGetResponseSuccess | systemNetworkSystemNetworkGetResponseError)
+
+export const getSystemNetworkSystemNetworkGetUrl = () => {
+
+
+  
+
+  return `/system/network/`
+}
+
+export const systemNetworkSystemNetworkGet = async ( options?: RequestInit): Promise<systemNetworkSystemNetworkGetResponse> => {
+  
+  return fetchApi<systemNetworkSystemNetworkGetResponse>(getSystemNetworkSystemNetworkGetUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getSystemNetworkSystemNetworkGetQueryKey = () => {
+    return [
+    `/system/network/`
+    ] as const;
+    }
+
+    
+export const getSystemNetworkSystemNetworkGetQueryOptions = <TData = Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError = void>( options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSystemNetworkSystemNetworkGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>> = ({ signal }) => systemNetworkSystemNetworkGet({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as CreateQueryOptions<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SystemNetworkSystemNetworkGetQueryResult = NonNullable<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>>
+export type SystemNetworkSystemNetworkGetQueryError = void
+
+
+/**
+ * @summary System Network
+ */
+
+export function createSystemNetworkSystemNetworkGet<TData = Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError = void>(
+  options?: () => { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+ , queryClient?: () => QueryClient 
+ ): CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  
+
+  const query = createQuery(() => getSystemNetworkSystemNetworkGetQueryOptions(options?.()), queryClient) as CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return query
+}
+
+/**
+ * @summary System Network
+ */
+export const prefetchSystemNetworkSystemNetworkGetQuery = async <TData = Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError = void>(
+ queryClient: QueryClient,  options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof systemNetworkSystemNetworkGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+
+  ): Promise<QueryClient> => {
+
+  const queryOptions = getSystemNetworkSystemNetworkGetQueryOptions(options)
 
   await queryClient.prefetchQuery(queryOptions);
 
