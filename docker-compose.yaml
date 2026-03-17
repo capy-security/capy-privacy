@@ -62,9 +62,9 @@ services:
       ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
       TLS_MODE: ${TLS_MODE:-off}
-      # Scheme prefixes: "http://" (local) or "" (production, Caddy defaults to HTTPS)
-      API_SCHEME: ${API_SCHEME:-http://}
-      ADMIN_SCHEME: ${ADMIN_SCHEME:-http://}
+      # Scheme: "http://" for local (TLS_MODE=off), empty for production (TLS_MODE=on). Do not default to http:// when empty.
+      API_SCHEME: ${API_SCHEME}
+      ADMIN_SCHEME: ${ADMIN_SCHEME}
     volumes:
       - ./resources/ssl/:/etc/ssl/
       - ./resources/caddy/:/etc/caddy/custom/:ro

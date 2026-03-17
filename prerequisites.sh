@@ -90,6 +90,7 @@ else
   gen_self_signed "${SSL_DIR}/ip" "$IP_ADDRESS" "IP:${IP_ADDRESS}"
 
   TLS_MODE="on"
+  # Empty scheme so Caddy serves API/Admin over HTTPS (no "http://" prefix → TLS)
   API_SCHEME=""
   ADMIN_SCHEME=""
   API_URL="https://${API_DOMAIN}/"
@@ -104,6 +105,7 @@ DOMAIN=${DOMAIN}
 IP_ADDRESS=${IP_ADDRESS}
 API_SECRET=${API_SECRET}
 TLS_MODE=${TLS_MODE}
+# For production (TLS_MODE=on) these must be empty so Caddy uses HTTPS for API/Admin
 API_SCHEME=${API_SCHEME}
 ADMIN_SCHEME=${ADMIN_SCHEME}
 API_URL=${API_URL}
