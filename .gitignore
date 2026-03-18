@@ -16,6 +16,7 @@ node_modules/
 .yarnrc.yml
 .pnp
 .pnp.js
+.svelte-kit/
 
 # Build output
 # dist/
