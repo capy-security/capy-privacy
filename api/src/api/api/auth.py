@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from typing import Annotated
 from api.database import get_database_fastapi, populate_database
 from api.models.user import (
@@ -26,6 +27,23 @@ router = APIRouter(
     tags=["authentication"],
     responses={404: {"description": "Not found"}},
 )
+
+
+class FirstRunStatus(BaseModel):
+    """Whether the app still needs first-time setup (no users yet)."""
+
+    needs_setup: bool = Field(
+        ...,
+        description="True if no admin user exists; show onboarding wizard",
+    )
+
+
+@router.get("/first-run/", response_model=FirstRunStatus)
+async def first_run(
+    database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
+) -> FirstRunStatus:
+    """Return whether first-run setup is required (no users in the database)."""
+    return FirstRunStatus(needs_setup=UserDB.select().count() == 0)
 
 
 @router.post("/token/")
