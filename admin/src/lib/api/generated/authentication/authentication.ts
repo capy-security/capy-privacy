@@ -6,17 +6,24 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
-  createMutation
+  createMutation,
+  createQuery
 } from '@tanstack/svelte-query';
 import type {
   CreateMutationOptions,
   CreateMutationResult,
+  CreateQueryOptions,
+  CreateQueryResult,
+  DataTag,
   MutationFunction,
-  QueryClient
+  QueryClient,
+  QueryFunction,
+  QueryKey
 } from '@tanstack/svelte-query';
 
 import type {
   ApiResponse,
+  FirstRunStatus,
   HTTPValidationError,
   LoginRequest,
   User,
@@ -27,6 +34,114 @@ import { fetchApi } from '../../mutator';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+/**
+ * Return whether first-run setup is required (no users in the database).
+ * @summary First Run
+ */
+export type firstRunAuthFirstRunGetResponse200 = {
+  data: FirstRunStatus
+  status: 200
+}
+
+export type firstRunAuthFirstRunGetResponse404 = {
+  data: void
+  status: 404
+}
+
+export type firstRunAuthFirstRunGetResponseSuccess = (firstRunAuthFirstRunGetResponse200) & {
+  headers: Headers;
+};
+export type firstRunAuthFirstRunGetResponseError = (firstRunAuthFirstRunGetResponse404) & {
+  headers: Headers;
+};
+
+export type firstRunAuthFirstRunGetResponse = (firstRunAuthFirstRunGetResponseSuccess | firstRunAuthFirstRunGetResponseError)
+
+export const getFirstRunAuthFirstRunGetUrl = () => {
+
+
+  
+
+  return `/auth/first-run/`
+}
+
+export const firstRunAuthFirstRunGet = async ( options?: RequestInit): Promise<firstRunAuthFirstRunGetResponse> => {
+  
+  return fetchApi<firstRunAuthFirstRunGetResponse>(getFirstRunAuthFirstRunGetUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getFirstRunAuthFirstRunGetQueryKey = () => {
+    return [
+    `/auth/first-run/`
+    ] as const;
+    }
+
+    
+export const getFirstRunAuthFirstRunGetQueryOptions = <TData = Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError = void>( options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getFirstRunAuthFirstRunGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>> = ({ signal }) => firstRunAuthFirstRunGet({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as CreateQueryOptions<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type FirstRunAuthFirstRunGetQueryResult = NonNullable<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>>
+export type FirstRunAuthFirstRunGetQueryError = void
+
+
+/**
+ * @summary First Run
+ */
+
+export function createFirstRunAuthFirstRunGet<TData = Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError = void>(
+  options?: () => { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+ , queryClient?: () => QueryClient 
+ ): CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  
+
+  const query = createQuery(() => getFirstRunAuthFirstRunGetQueryOptions(options?.()), queryClient) as CreateQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return query
+}
+
+/**
+ * @summary First Run
+ */
+export const prefetchFirstRunAuthFirstRunGetQuery = async <TData = Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError = void>(
+ queryClient: QueryClient,  options?: { query?:Partial<CreateQueryOptions<Awaited<ReturnType<typeof firstRunAuthFirstRunGet>>, TError, TData>>, request?: SecondParameter<typeof fetchApi>}
+
+  ): Promise<QueryClient> => {
+
+  const queryOptions = getFirstRunAuthFirstRunGetQueryOptions(options)
+
+  await queryClient.prefetchQuery(queryOptions);
+
+  return queryClient;
+}
 
 
 

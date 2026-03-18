@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createAdminAuthAdminPost } from '$lib/api/generated/authentication/authentication';
+	import {
+		createFirstRunAuthFirstRunGet,
+		createCreateAdminAuthAdminPost
+	} from '$lib/api/generated/authentication/authentication';
 	import { UserRole } from '$lib/api/generated/models/userRole';
 	import {
 		Envelope,
@@ -11,12 +14,30 @@
 		ArrowLeft
 	} from 'svelte-heros-v2';
 
-	let displayName = $state('');
+	let displayName = $state('Admin');
 	let email = $state('');
 	let password = $state('');
-	let isLoading = $state(false);
 	let localError = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
+	let didRedirect = $state(false);
+
+	const firstRunQuery = createFirstRunAuthFirstRunGet(() => ({
+		query: { retry: false, staleTime: 30_000 }
+	}));
+
+	$effect(() => {
+		if (didRedirect) return;
+		if (!firstRunQuery.isSuccess || !firstRunQuery.data?.data) return;
+		const d = firstRunQuery.data.data as { needs_setup?: boolean };
+		if (d.needs_setup === false) {
+			didRedirect = true;
+			goto('/login');
+		}
+	});
+
+	const createAdminMutation = createCreateAdminAuthAdminPost();
+
+	let isLoading = $derived(createAdminMutation.isPending);
 
 	const error = $derived(localError);
 
@@ -39,33 +60,21 @@
 			return;
 		}
 
-		isLoading = true;
-		localError = null;
-
 		try {
-			const response = await createAdminAuthAdminPost({
-				display_name: displayName.trim(),
-				email: email.trim(),
-				password,
-				role: UserRole.NUMBER_1
-			});
-
-			if (response.status === 200) {
-				const msg = response.data?.message ?? '';
-				if (msg.includes('already exists')) {
-					localError = response.data?.message || 'Admin already exists. Sign in instead.';
-				} else {
-					successMessage = 'Admin account created. You can now sign in.';
-					setTimeout(() => goto('/login'), 1500);
+			await createAdminMutation.mutateAsync({
+				data: {
+					display_name: displayName.trim(),
+					email: email.trim(),
+					password,
+					role: UserRole.NUMBER_1
 				}
-			} else {
-				localError = 'Could not create admin. Try again or sign in if one already exists.';
-			}
+			});
+			successMessage = 'Admin account created. You can now sign in.';
+			setTimeout(() => goto('/login'), 1500);
 		} catch (err) {
 			console.error('[CreateAdmin] Failed:', err);
-			localError = err instanceof Error ? err.message : 'Failed to create admin account.';
-		} finally {
-			isLoading = false;
+			localError =
+				err instanceof Error ? err.message : 'Failed to create admin account.';
 		}
 	}
 </script>
@@ -73,8 +82,11 @@
 <div>
 	<div class="w-full max-w-md">
 		<div>
-			<h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-				Create admin account
+			<h2
+				class="mt-6 text-center text-3xl font-bold leading-snug tracking-tight text-white"
+			>
+				Welcome to Capy Privacy.<br />
+				Please Setup your admin account
 			</h2>
 			<p class="mt-2 text-center text-sm text-gray-300">
 				First time only — use this when no admin exists yet.

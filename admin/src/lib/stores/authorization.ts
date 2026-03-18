@@ -1,10 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { jwtDecode } from 'jwt-decode';
-import { getUserTokenAuthTokenPost } from '../api/generated/authentication/authentication';
-import type { LoginRequest, ApiResponse } from '../api/generated/models';
-import { getErrorMessage } from '../utils/errorHandler';
-
 // User status types
 export type UserStatus = 'valid' | 'expired' | 'invalid';
 
@@ -172,63 +168,26 @@ function createAuthStore() {
         subscribe: baseStore.subscribe,
 
         /**
-         * Login function - get token and decode it
+         * Persist session after a successful token mutation (e.g. login on the login page).
          */
-        login: async (email: string, password: string): Promise<void> => {
+        applyToken(token: string): void {
             try {
-                const response = await getUserTokenAuthTokenPost({
-                    email,
-                    password,
-                } as LoginRequest);
-
-                if (response.status !== 200) {
-                    // Extract error message from API response
-                    const errorData = response.data as ApiResponse | { message?: string; detail?: string } | unknown;
-                    let errorMessage = 'Login failed';
-
-                    if (errorData && typeof errorData === 'object') {
-                        // Check if it's an ApiResponse format
-                        if ('success' in errorData && 'message' in errorData) {
-                            errorMessage = getErrorMessage(errorData as ApiResponse, 'Login failed');
-                        } else if ('message' in errorData && typeof (errorData as any).message === 'string') {
-                            errorMessage = (errorData as any).message;
-                        } else if ('detail' in errorData && typeof (errorData as any).detail === 'string') {
-                            errorMessage = (errorData as any).detail;
-                        }
-                    }
-
-                    throw new Error(errorMessage);
-                }
-
-                // Extract token from response
-                // response.data is ApiResponse: { success, message, data: { token } }
-                const apiResponse = response.data as ApiResponse;
-                const token = (apiResponse?.data as { token?: string })?.token;
-
-                if (!token) {
-                    throw new Error('No token received from server');
-                }
-
-                // Decode token to get profile
                 const profile = decodeToken(token);
                 if (!profile) {
                     throw new Error('Failed to decode token');
                 }
-
-                const user: User = {
+                const newUser: User = {
                     status: 'valid',
                     authenticated: true,
                     token,
                     profile,
                 };
-
-                baseStore.set(user);
-                saveUser(user);
-            } catch (error) {
-                // Don't log here - let the caller handle logging to avoid duplicate messages
+                baseStore.set(newUser);
+                saveUser(newUser);
+            } catch {
                 baseStore.set(emptyUser);
                 saveUser(emptyUser);
-                throw error;
+                throw new Error('Failed to establish session');
             }
         },
 

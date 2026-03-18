@@ -11,12 +11,13 @@ __pycache__/
 
 # React / Node
 node_modules/
+.svelte-kit/
 .yarn/
 .yarnrc.yml
 .yarnrc.yml
 .pnp
 .pnp.js
-.svelte-kit/
+
 
 # Build output
 # dist/

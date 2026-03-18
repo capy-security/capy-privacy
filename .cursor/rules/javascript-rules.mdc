@@ -29,5 +29,10 @@ The admin app is built with SvelteKit (and Vite). Follow SvelteKit conventions:
 
 Orval generates the TypeScript API client from the capy API OpenAPI spec. Config: `admin/orval.config.ts` (single backend **capy**). Generated code: `admin/src/lib/api/generated/` (endpoints by tag and `models/`). Regenerate with `yarn api` from `admin/`; do not edit generated files.
 
-- Requests use the custom mutator (`admin/src/lib/api/mutator.ts`): sets base URL, JSON headers, and handles the API envelope (`success` / `data`) and errors so TanStack Query sees failures correctly.
-- In components: use the generated hooks (queries and mutations). Invalidate cache with `useQueryClient()` and the appropriate `queryKey` (e.g. from `getReadObjectDnsTableGetQueryKey`) after mutations.
+- HTTP calls go through the custom **fetch mutator** (`admin/src/lib/api/mutator.ts`): base URL, JSON headers, API envelope (`success` / `data`), and errors aligned with TanStack Query.
+
+### TanStack Query by default
+
+- **Prefer the generated TanStack factories** in UI code: **`create…`** query hooks for GETs and **`create…`** mutation hooks for POST/PUT/PATCH/DELETE (e.g. `createListUsersDatabaseUserGet`, `createCreateClientDatabaseClientPost`). Call `mutateAsync({ data: … })` / use query `data` and `isPending` instead of importing the raw `fooBarGet` / `fooBarPost` functions from generated files.
+- **Only use raw generated functions** (`getXxx`, `postXxx`, …) when a TanStack hook is not a fit (e.g. one-off server `load`, scripts, or very small utilities).
+- After mutations, **invalidate** related data with `useQueryClient()` and the exported **`get…QueryKey`** helpers from the same generated module.

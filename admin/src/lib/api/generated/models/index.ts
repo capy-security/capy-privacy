@@ -19,6 +19,7 @@ export * from './deleteStatisticDatabaseStatisticDeleteParams';
 export * from './deleteUserDatabaseUserDeleteParams';
 export * from './domain';
 export * from './domainsStatisticsMetricsDomainsStatisticsGetParams';
+export * from './firstRunStatus';
 export * from './group';
 export * from './hTTPValidationError';
 export * from './listCategoriesDatabaseCategoryGetParams';

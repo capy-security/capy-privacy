@@ -3,9 +3,9 @@
 
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createUserAuthUserPost,
-		updateUserAuthUserPut,
-		deleteUserAuthUserDelete
+		createCreateUserAuthUserPost,
+		createUpdateUserAuthUserPut,
+		createDeleteUserAuthUserDelete
 	} from '$lib/api/generated/authentication/authentication';
 	import {
 		createListUsersDatabaseUserGet,
@@ -20,8 +20,6 @@
 	import { ChevronLeft, ChevronRight, Plus, XMark, PencilSquare, Trash } from 'svelte-heros-v2';
 	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import type { User, UserFormData } from '$lib/models/user';
-	import { getErrorMessage } from '$lib/utils/errorHandler';
-
 	const queryClient = useQueryClient();
 	let user = $derived($authorizationStore);
 	let currentPage = $state(1);
@@ -51,7 +49,6 @@
 
 	// Create Modal state
 	let isModalOpen = $state(false);
-	let isCreating = $state(false);
 	let createError = $state<string | null>(null);
 	let formData = $state<UserFormData>({
 		display_name: '',
@@ -62,7 +59,6 @@
 
 	// Edit Modal state
 	let isEditModalOpen = $state(false);
-	let isUpdating = $state(false);
 	let updateError = $state<string | null>(null);
 	let editingUser = $state<User | null>(null);
 	let editFormData = $state<UserFormData>({
@@ -74,13 +70,45 @@
 
 	// Delete Modal state
 	let isDeleteModalOpen = $state(false);
-	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 	let userToDelete = $state<User | null>(null);
 
 	function invalidateUsersList() {
 		queryClient.invalidateQueries({ queryKey: getListUsersDatabaseUserGetQueryKey() });
 	}
+
+	const createUserMutation = createCreateUserAuthUserPost(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
+		mutation: {
+			onSuccess: () => {
+				closeModal();
+				invalidateUsersList();
+			}
+		}
+	}));
+	let isCreating = $derived(createUserMutation.isPending);
+
+	const updateUserMutation = createUpdateUserAuthUserPut(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
+		mutation: {
+			onSuccess: () => {
+				closeEditModal();
+				invalidateUsersList();
+			}
+		}
+	}));
+	let isUpdating = $derived(updateUserMutation.isPending);
+
+	const deleteUserMutation = createDeleteUserAuthUserDelete(() => ({
+		request: { headers: { Authorization: `Bearer ${user.token}` } },
+		mutation: {
+			onSuccess: () => {
+				closeDeleteModal();
+				invalidateUsersList();
+			}
+		}
+	}));
+	let isDeleting = $derived(deleteUserMutation.isPending);
 
 	function goToPage(page: number) {
 		if (page >= 1 && page <= totalPages) {
@@ -236,7 +264,6 @@
 			return;
 		}
 
-		isCreating = true;
 		createError = null;
 
 		try {
@@ -247,33 +274,10 @@
 				role: formData.role as UserRole
 			};
 
-			// console.log('Creating user with payload:', JSON.stringify(payload, null, 2));
-
-			const response = await createUserAuthUserPost(payload as GeneratedUser, {
-				headers: {
-					Authorization: `Bearer ${user.token}`,
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.status === 200 && response.data) {
-				const apiResponse = response.data as ApiResponse;
-				if (apiResponse.success) {
-					closeModal();
-					invalidateUsersList();
-				} else {
-					createError = getErrorMessage(apiResponse, 'Failed to create user');
-				}
-			} else {
-				// Handle non-200 responses
-				const errorResponse = response.data as ApiResponse | undefined;
-				createError = getErrorMessage(errorResponse, 'Failed to create user');
-			}
+			await createUserMutation.mutateAsync({ data: payload as GeneratedUser });
 		} catch (err) {
 			console.error('Error creating user:', err);
 			createError = err instanceof Error ? err.message : 'An error occurred';
-		} finally {
-			isCreating = false;
 		}
 	}
 
@@ -297,7 +301,6 @@
 			return;
 		}
 
-		isUpdating = true;
 		updateError = null;
 
 		try {
@@ -308,39 +311,15 @@
 				role: editFormData.role as UserRole
 			};
 
-			// Only include password if it was provided
 			const trimmedPassword = editFormData.password?.trim() || '';
 			if (trimmedPassword) {
 				payload.password = trimmedPassword;
 			}
 
-			console.log('Updating user with payload:', JSON.stringify(payload, null, 2));
-
-			const response = await updateUserAuthUserPut(payload as GeneratedUser, {
-				headers: {
-					Authorization: `Bearer ${user.token}`,
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.status === 200 && response.data) {
-				const apiResponse = response.data as ApiResponse;
-				if (apiResponse.success) {
-					closeEditModal();
-					invalidateUsersList();
-				} else {
-					updateError = getErrorMessage(apiResponse, 'Failed to update user');
-				}
-			} else {
-				// Handle non-200 responses
-				const errorResponse = response.data as ApiResponse | undefined;
-				updateError = getErrorMessage(errorResponse, 'Failed to update user');
-			}
+			await updateUserMutation.mutateAsync({ data: payload as GeneratedUser });
 		} catch (err) {
 			console.error('Error updating user:', err);
 			updateError = err instanceof Error ? err.message : 'An error occurred';
-		} finally {
-			isUpdating = false;
 		}
 	}
 
@@ -350,40 +329,13 @@
 			return;
 		}
 
-		isDeleting = true;
 		deleteError = null;
 
 		try {
-			const response = await deleteUserAuthUserDelete(
-				{
-					id: userToDelete.id
-				},
-				{
-					headers: {
-						Authorization: `Bearer ${user.token}`,
-						'Content-Type': 'application/json'
-					}
-				}
-			);
-
-			if (response.status === 200 && response.data) {
-				const apiResponse = response.data as ApiResponse;
-				if (apiResponse.success) {
-					closeDeleteModal();
-					invalidateUsersList();
-				} else {
-					deleteError = getErrorMessage(apiResponse, 'Failed to delete user');
-				}
-			} else {
-				// Handle non-200 responses
-				const errorResponse = response.data as ApiResponse | undefined;
-				deleteError = getErrorMessage(errorResponse, 'Failed to delete user');
-			}
+			await deleteUserMutation.mutateAsync({ data: { id: userToDelete.id } });
 		} catch (err) {
 			console.error('Error deleting user:', err);
 			deleteError = err instanceof Error ? err.message : 'An error occurred';
-		} finally {
-			isDeleting = false;
 		}
 	}
 
