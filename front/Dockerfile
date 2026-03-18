@@ -28,13 +28,12 @@ RUN yarn build
 # -----------------------------------------------------------------------------
 FROM alpine:latest
 
-RUN apk add --no-cache caddy supervisor
+RUN apk add --no-cache caddy
 
 RUN mkdir -p /var/capy/admin/
 RUN mkdir -p /etc/caddy/custom/
-RUN mkdir -p /var/log/supervisor/
 
-# Copy Caddy + supervisor config and static resources from front/system
+# Copy Caddy config and static resources from front/system
 COPY front/system/ /
 
 # Copy built admin app
@@ -45,4 +44,4 @@ RUN chown -R caddy:www-data /var/capy/admin/ /var/capy/blocked/
 EXPOSE 80/tcp
 EXPOSE 443/tcp
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+CMD ["/usr/sbin/caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
