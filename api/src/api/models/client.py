@@ -16,12 +16,12 @@ class Client(BaseModel):
         json_schema_extra={
             "examples": [
                 {"ip": "192.168.1.120", "name": "telephone-gael"},
-                {"ip": "192.168.1.0/24", "name": "family-network"},
+                {"ip": "10.0.0.1", "name": "server"},
             ],
         }
     )
     id: int | None = Field(default=None, title="Client ID")
-    ip: str = Field(min_length=1, max_length=45, title="Client IP or CIDR")
+    ip: str = Field(min_length=1, max_length=45, title="Client IP address")
     name: str = Field(min_length=1, max_length=64, title="Client Name")
     description: str = Field(
         default="", min_length=0, max_length=128, title="Client Description"
@@ -29,15 +29,10 @@ class Client(BaseModel):
 
     @field_validator("ip")
     @classmethod
-    def validate_ip_or_cidr(cls, v: str) -> str:
-        """Accept a single IPv4/IPv6 address or a CIDR network (e.g. 192.168.1.0/24)."""
+    def validate_ip(cls, v: str) -> str:
         v = v.strip()
-        if "/" in v:
-            network = ipaddress.ip_network(v, strict=False)
-            return str(network)
-        else:
-            addr = ipaddress.ip_address(v)
-            return str(addr)
+        addr = ipaddress.ip_address(v)
+        return str(addr)
 
     @field_validator("description", mode="before")
     @classmethod
