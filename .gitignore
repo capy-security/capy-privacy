@@ -5,6 +5,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .Python
+api/database/
 
 # SvelteKit (admin) – generated build/cache, regenerated on build
 .svelte-kit/
