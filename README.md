@@ -56,6 +56,7 @@ cd capy-privacy
 - Choose **1** for local usage only (self-signed certs) or **2** for internet (Let's Encrypt).
 - For local: accept default domain `localhost` and IP `127.0.0.1` by pressing Enter, or type your LAN server domain/IP.
 - The script writes `.env` (including `API_SECRET` for the API) and populates `resources/ssl/{api,dns,admin,ip}/` with the required certificates.
+- If you install capy-security in a public internet server you need to add your home IP address to `./capy-privacy/core/system/etc/powerdns/allow_from.yml`
 
 3. **Build and run**
 

@@ -15,7 +15,7 @@ class Client(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
-                {"ip": "192.168.1.120", "name": "telephone-gael"},
+                {"ip": "192.168.1.120", "name": "my-device"},
                 {"ip": "10.0.0.1", "name": "server"},
             ],
         }

@@ -8,7 +8,7 @@
 FROM alpine:latest
 
 ARG application="capy-core"
-ARG domain="dns.capysecurity.com"
+ARG domain="dns.example.com"
 ARG TARGETARCH
 
 WORKDIR /${application}

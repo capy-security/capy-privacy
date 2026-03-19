@@ -26,8 +26,6 @@ class ProductionConfig(BaseConfig):
         f"api.{os.environ.get('DOMAIN', 'localhost')}",
     ]
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_PROD)}"
-    # mysql+pymysql://db_user:db_pass@localhost/db_name
-    # SERVER_NAME = "capysecurity.com"
 
 
 class DevelopmentConfig(BaseConfig):
