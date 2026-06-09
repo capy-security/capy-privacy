@@ -1,0 +1,1 @@
+import{t as e}from"./pbZlwoiC.js";var t=()=>`/setup/`,n=async n=>e(t(),{...n,method:`GET`}),r=e=>`/setup/update/${e}`,i=async(t,n)=>e(r(t),{...n,method:`GET`});export{i as n,n as t};
