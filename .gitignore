@@ -56,15 +56,3 @@ openapi.json
 # production DB (directory tracked via .gitkeep for volume mount)
 resources/database/*
 !resources/database/.gitkeep
-
-# Optional custom Caddy config (user-provided files in resources/caddy/)
-resources/caddy/*
-!resources/caddy/.gitkeep
-
-# SSL certs (directory tracked via .gitkeep for volume mount)
-resources/ssl/*
-!resources/ssl/.gitkeep
-
-# www (directory tracked via .gitkeep for volume mount)
-resources/www/*
-!resources/www/.gitkeep

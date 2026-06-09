@@ -46,7 +46,6 @@ RUN rm -rf /etc/pdns && ln -s /etc/powerdns /etc/pdns
 # Directories (Alpine pdns-recursor uses user recursor; supervisor runs as root)
 RUN mkdir -p /var/capy/database/ \
     && mkdir -p /var/run/pdns-recursor \
-    && mkdir -p /etc/ssl/ \
     && mkdir -p /var/log/supervisor
 
 EXPOSE 53/udp

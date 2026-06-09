@@ -32,6 +32,16 @@ Home DNS filtering platform with
 - Internet inbound connectivity on those ports (if you want to use it in roaming)
 - If you want to use from the outside (5G network or other) you will need a DNS domain
 
+## mkcert
+
+```
+sudo apt install libnss3-tools
+curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+chmod +x mkcert-v*-linux-amd64
+sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+```
+
+
 ## Quick start (first time)
 
 From the device that will host the services
@@ -46,16 +56,16 @@ git clone https://github.com/capy-security/capy-privacy.git
 
 2. **First-time setup**
 
-Launch the prerequisites script. It will create env variables and certificates
+Launch `./init.sh` from the repo root. It creates env variables and TLS material on the host.
 
 ```bash
 cd capy-privacy
-./prerequisites.sh
+./init.sh
 ```
 
-- Choose **1** for local usage only (self-signed certs) or **2** for internet (Let's Encrypt).
-- For local: accept default domain `localhost` and IP `127.0.0.1` by pressing Enter, or type your LAN server domain/IP.
-- The script writes `.env` (including `API_SECRET` for the API) and populates `resources/ssl/{api,dns,admin,ip}/` with the required certificates.
+- For **localhost**, you need `mkcert` (locally trusted dev certs).
+- For a **real domain**, you need `certbot` and ports 80/443 free for ACME.
+- The script writes `.env` (including `API_SECRET`) and material under host `/etc/letsencrypt/live/`. Both `capy_front` and `capy_core` mount `/etc/letsencrypt` read-only; dnsdist builds TLS paths from `DOMAIN` (see `core/system/etc/dnsdist/dnsdist.conf`).
 - /!\ If you install capy-security in a public internet server:
   - you need to add your home IP address to `./capy-privacy/core/system/etc/powerdns/allow_from.yml`
 
@@ -99,12 +109,12 @@ After logging in, the sidebar gives access to:
 ```
 capy-privacy/
 ├── docker-compose.yaml   # API, core, front
-├── prerequisites.sh      # First-time setup: .env (incl. API_SECRET) + SSL (self-signed or Let's Encrypt)
+├── init.sh               # First-time setup: .env, host TLS, Caddyfile
 ├── api/                  # FastAPI app, SQLite, domain/client/blocklist logic
 ├── core/                 # dnsdist + PowerDNS Recursor config
 ├── front/                # Caddy config, static admin SPA, blocked page
 ├── admin/                # SvelteKit source for the admin UI (built into front image)
-└── resources/            # SSL, database, caddy custom config (created by setup)
+└── resources/            # database (SQLite), ssl/dns for core (created by init)
 ```
 
 ## License

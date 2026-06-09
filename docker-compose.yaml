@@ -30,12 +30,15 @@ services:
   capy_core:
     image: capy_core:latest
     restart: always
+    env_file: .env
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
     depends_on:
       capy_api:
         condition: service_healthy
     volumes:
       - ./resources/database/:/var/capy/database/
-      - ./resources/ssl/:/etc/ssl/
+      - /etc/letsencrypt/:/etc/letsencrypt/:ro
     ports:
       - "53:53/udp"
       - "5300:5300/tcp"
@@ -64,20 +67,10 @@ services:
       - capy_core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
-      API_DOMAIN: api.${DOMAIN:-localhost}
-      DNS_DOMAIN: dns.${DOMAIN:-localhost}
-      ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
-      IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
-      TLS_MODE: ${TLS_MODE:-off}
-      # Scheme: "http://" for local (TLS_MODE=off), empty for production (TLS_MODE=on). Do not default to http:// when empty.
-      API_SCHEME: ${API_SCHEME}
-      ADMIN_SCHEME: ${ADMIN_SCHEME}
     volumes:
-      - ./resources/ssl/:/etc/ssl/
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /etc/letsencrypt/:/etc/letsencrypt/:ro
-      # - ./resources/caddy/:/etc/caddy/custom/:ro
-      # - ./resources/custom/:/var/capy/custom/
+      - /var/www/:/var/www/:ro
     ports:
       - '80:80/tcp'
       - '443:443/tcp'

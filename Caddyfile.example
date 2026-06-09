@@ -131,12 +131,11 @@ https://91.134.137.25 {
 
 
 # -----------------------------------------------------------------------------
-# Custom Caddy config
+# Apex domain (static site on host; capy_front: /var/www/:/var/www/:ro)
 # -----------------------------------------------------------------------------
 
 capysecurity.com {
-	tls /etc/ssl/custom/fullchain.pem /etc/ssl/custom/privkey.pem
-	# located here on host: /etc/letsencrypt/live/capysecurity.com/
+	tls /etc/letsencrypt/live/capysecurity.com/fullchain.pem /etc/letsencrypt/live/capysecurity.com/privkey.pem
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
@@ -147,7 +146,7 @@ capysecurity.com {
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	root * /var/capy/custom/
+	root * /var/www/
 
 	# Static assets with cache (30d)
 	@static path_regexp .*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|json)$
