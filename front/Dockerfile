@@ -32,6 +32,7 @@ RUN apk add --no-cache caddy
 
 RUN mkdir -p /var/capy/admin/
 RUN mkdir -p /etc/caddy/custom/
+RUN mkdir -p /etc/letsencrypt/live/
 
 # Copy Caddy config and static resources from front/system
 COPY front/system/ /
