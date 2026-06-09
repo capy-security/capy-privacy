@@ -74,8 +74,9 @@ services:
       ADMIN_SCHEME: ${ADMIN_SCHEME}
     volumes:
       - ./resources/ssl/:/etc/ssl/
-      - ./resources/caddy/:/etc/caddy/custom/:ro
-      - ./resources/custom/:/var/capy/custom/
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # - ./resources/caddy/:/etc/caddy/custom/:ro
+      # - ./resources/custom/:/var/capy/custom/
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
