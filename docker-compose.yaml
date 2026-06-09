@@ -85,7 +85,7 @@ services:
         application: "admin"
         domain: "admin.${DOMAIN:-localhost}"
         ip_address: "${IP_ADDRESS:-127.0.0.1}"
-        VITE_API_URL: "http://api.${DOMAIN:-localhost}/"
+        VITE_API_URL: "https://api.${DOMAIN:-localhost}/"
       tags:
         - test
 
