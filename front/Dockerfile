@@ -14,6 +14,7 @@ WORKDIR /app
 COPY admin/package.json admin/yarn.lock* admin/package-lock.json* ./
 COPY admin/ ./
 
+RUN npm install -g corepack
 RUN corepack enable yarn \
     && yarn install --frozen-lockfile
 
