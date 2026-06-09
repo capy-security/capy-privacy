@@ -293,4 +293,4 @@ echo "  TLS material: /etc/letsencrypt/live/<hostname>/ (mounted into capy_front
 echo "  Wrote ${ROOT}/.env and ${ROOT}/Caddyfile"
 echo ""
 echo "Next:  docker compose up -d --build"
-echo "Note: for HTTPS API in the admin UI, set API_URL=https://${API_DOMAIN}/ in .env before build (see docker-compose)."
+echo "Note: Rebuild capy_front after DOMAIN changes — VITE_API_URL is http://api.<DOMAIN>/ from docker-compose (set https in compose if you need TLS for the API in the browser)."
