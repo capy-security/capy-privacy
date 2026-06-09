@@ -75,7 +75,7 @@ services:
     volumes:
       - ./resources/ssl/:/etc/ssl/
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - /etc/letsencrypt/live/:/etc/letsencrypt/live/:ro
+      - /etc/letsencrypt/:/etc/letsencrypt/:ro
       # - ./resources/caddy/:/etc/caddy/custom/:ro
       # - ./resources/custom/:/var/capy/custom/
     ports:
