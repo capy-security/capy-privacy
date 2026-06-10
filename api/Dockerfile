@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Multi-stage: build Python package with Poetry, then minimal runtime
-# Build context: ./api (docker compose build capy_api)
+# Build context: ./api (podman compose build capy_api)
 
 # -----------------------------------------------------------------------------
 # Stage 1: build the package

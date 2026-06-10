@@ -1,5 +1,6 @@
 # Base domain (e.g. capysecurity.com). API/DNS/Admin are always api.$DOMAIN, dns.$DOMAIN, admin.$DOMAIN.
 # Set DOMAIN (and optionally IP_ADDRESS) in .env.
+# This compose file is standardized for `podman compose`.
 services:
   capy_api:
     image: capy_api:latest
@@ -8,7 +9,7 @@ services:
     environment:
       API_ENV: "production"
     volumes:
-      - ./resources/database/:/var/capy/database/
+      - ./resources/database/:/var/capy/database/:Z
     ports:
       - "127.0.0.1:8080:8080/tcp"
     expose:
@@ -24,8 +25,6 @@ services:
       args:
         application: "api"
         domain: "api.${DOMAIN:-localhost}"
-      tags:
-        - test
 
   capy_core:
     image: capy_core:latest
@@ -34,11 +33,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     depends_on:
-      capy_api:
-        condition: service_healthy
+      - capy_api
     volumes:
-      - ./resources/database/:/var/capy/database/
-      - /etc/letsencrypt/:/etc/letsencrypt/:ro
+      - ./resources/database/:/var/capy/database/:Z
+      - /etc/letsencrypt/:/etc/letsencrypt/:ro,Z
     ports:
       - "53:53/udp"
       - "5300:5300/tcp"
@@ -56,8 +54,6 @@ services:
       args:
         application: "core"
         domain: "dns.${DOMAIN:-localhost}"
-      tags:
-        - test
 
   capy_front:
     image: capy_front:latest
@@ -69,9 +65,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - /etc/letsencrypt/:/etc/letsencrypt/:ro
-      - /var/www/:/var/www/:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - /etc/letsencrypt/:/etc/letsencrypt/:ro,Z
+      - /var/www/:/var/www/:ro,Z
+      - /var/log/caddy/:/var/log/caddy/:Z
     ports:
       - '80:80/tcp'
       - '443:443/tcp'
@@ -86,8 +83,6 @@ services:
         domain: "admin.${DOMAIN:-localhost}"
         ip_address: "${IP_ADDRESS:-127.0.0.1}"
         VITE_API_URL: "https://api.${DOMAIN:-localhost}/"
-      tags:
-        - test
 
 volumes:
   capy_database:
