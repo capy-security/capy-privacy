@@ -30,8 +30,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Probe capy_core DNS services (53/udp, 853/tcp, 5300/tcp) and return status.
-Uses CORE_HOST env (default: capy_core) as target host.
+ * Probe capy-core DNS services (53/udp, 853/tcp, 5300/tcp) and return status.
+Uses CORE_HOST env (default: capy-core) as target host.
  * @summary System Health
  */
 export type systemHealthSystemHealthGetResponse200 = {

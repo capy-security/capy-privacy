@@ -2,8 +2,8 @@
 # Set DOMAIN (and optionally IP_ADDRESS) in .env.
 # This compose file is standardized for `podman compose`.
 services:
-  capy_api:
-    image: capy_api:latest
+  capy-api:
+    image: capy-api:latest
     restart: always
     env_file: .env
     environment:
@@ -31,8 +31,8 @@ services:
         application: "api"
         domain: "api.${DOMAIN:-localhost}"
 
-  capy_core:
-    image: capy_core:latest
+  capy-core:
+    image: capy-core:latest
     restart: always
     env_file: .env
     environment:
@@ -42,7 +42,7 @@ services:
         aliases:
           - capy-core
     depends_on:
-      - capy_api
+      - capy-api
     volumes:
       - ./resources/database/:/var/capy/database/:Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
@@ -64,13 +64,13 @@ services:
         application: "core"
         domain: "dns.${DOMAIN:-localhost}"
 
-  capy_front:
-    image: capy_front:latest
+  capy-front:
+    image: capy-front:latest
     restart: always
     env_file: .env
     depends_on:
-      - capy_api
-      - capy_core
+      - capy-api
+      - capy-core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     networks:

@@ -20,8 +20,8 @@ Home DNS filtering platform with
 | -------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
 | **Capy Front** | Caddy                                | Publishes the API, DoH, and admin SPA. TLS termination, routing by host/path.       |
 | **Admin SPA**  | Svelte + Orval SPA                   | Web UI at `admin.<domain>`; talks to the API. DoH and DNS at `dns.<domain>`.        |
-| **capy_api**   | Python FastAPI                       | REST API (domains, clients, categories, stats). Feeds blocklist/config to the core. |
-| **capy_core**  | DnsDist, PowerDNS Recursor, capy.lua | DoH (`/dns-query` on :5300) and DoT (:853). Applies policy and recursion.           |
+| **capy-api**   | Python FastAPI                       | REST API (domains, clients, categories, stats). Feeds blocklist/config to the core. |
+| **capy-core**  | DnsDist, PowerDNS Recursor, capy.lua | DoH (`/dns-query` on :5300) and DoT (:853). Applies policy and recursion.           |
 
 ## Requirements
 
@@ -65,7 +65,7 @@ cd capy-privacy
 
 - For **localhost**, you need `mkcert` (locally trusted dev certs).
 - For a **real domain**, you need `certbot` and ports 80/443 free for ACME.
-- The script writes `.env` (including `API_SECRET`) and material under host `/etc/letsencrypt/live/`. Both `capy_front` and `capy_core` mount `/etc/letsencrypt` read-only; dnsdist builds TLS paths from `DOMAIN` (see `core/system/etc/dnsdist/dnsdist.conf`).
+- The script writes `.env` (including `API_SECRET`) and material under host `/etc/letsencrypt/live/`. Both `capy-front` and `capy-core` mount `/etc/letsencrypt` read-only; dnsdist builds TLS paths from `DOMAIN` (see `core/system/etc/dnsdist/dnsdist.conf`).
 - /!\ If you install capy-security in a public internet server:
   - you need to add your home IP address to `./capy-privacy/core/system/etc/powerdns/allow_from.yml`
 

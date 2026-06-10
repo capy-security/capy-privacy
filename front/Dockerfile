@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Multi-stage: build admin frontend, then serve with Caddy
 # Build context must be repo root so both admin/ and front/ are available.
-# podman compose -f docker-compose.yaml build capy_front  (from repo root)
+# podman compose -f docker-compose.yaml build capy-front  (from repo root)
 
 # -----------------------------------------------------------------------------
 # Stage 1: build admin SvelteKit app

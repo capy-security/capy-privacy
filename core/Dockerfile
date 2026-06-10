@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # DNS core: PowerDNS Recursor + dnsdist + metrics listener (Alpine)
-# Build context: ./core (e.g. podman compose build capy_core)
+# Build context: ./core (e.g. podman compose build capy-core)
 
 # -----------------------------------------------------------------------------
 # Stage: runtime (alpine:latest for newer pdns-recursor; edge has broken dnsdist deps)
