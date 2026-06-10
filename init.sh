@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 # Capy Privacy — first-time setup: TLS, Caddyfile, .env
-# Usage: ./init.sh   (from repo root; uses sudo for /etc/letsencrypt)
+# Usage: ./init.sh   (from repo root; stores cert material in ./ssl)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 CADDY_TEMPLATE="${ROOT}/Caddyfile.template"
+SSL_ROOT="${ROOT}/ssl"
+SSL_WORK_DIR="${SSL_ROOT}/work"
+SSL_LOGS_DIR="${SSL_ROOT}/logs"
 
-# Install real cert + key files under /etc/letsencrypt/live/<name>/ (not symlinks) for Docker bind mounts.
+# Install real cert + key files under ./ssl/live/<name>/ for compose bind mounts.
 install_cert() {
 	local name="$1" cert="$2" key="$3"
-	sudo mkdir -p "/etc/letsencrypt/live/${name}"
-	sudo cp "$cert" "/etc/letsencrypt/live/${name}/fullchain.pem"
-	sudo cp "$key" "/etc/letsencrypt/live/${name}/privkey.pem"
-	sudo chmod 644 "/etc/letsencrypt/live/${name}/fullchain.pem"
-	sudo chmod 600 "/etc/letsencrypt/live/${name}/privkey.pem"
+	mkdir -p "${SSL_ROOT}/live/${name}"
+	cp "$cert" "${SSL_ROOT}/live/${name}/fullchain.pem"
+	cp "$key" "${SSL_ROOT}/live/${name}/privkey.pem"
+	chmod 644 "${SSL_ROOT}/live/${name}/fullchain.pem"
+	chmod 600 "${SSL_ROOT}/live/${name}/privkey.pem"
 }
 
-# Self-signed TLS for bare IP (block page HTTPS). Installs under /etc/letsencrypt/live/<ip>/
+# Self-signed TLS for bare IP (block page HTTPS). Installs under ./ssl/live/<ip>/
 gen_self_signed_ip() {
 	local ip="$1"
 	local d c k
@@ -103,6 +106,7 @@ else
 fi
 
 # --- certificates ------------------------------------------------------------
+mkdir -p "${SSL_ROOT}" "${SSL_WORK_DIR}" "${SSL_LOGS_DIR}"
 
 if [[ "$DOMAIN" == "localhost" ]]; then
 	if ! command -v mkcert >/dev/null 2>&1; then
@@ -129,15 +133,11 @@ else
 	echo "Ensure ports 80 and 443 are free (e.g. podman compose down) before certbot runs."
 	read -rp "Press Enter to continue..."
 	for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "${DOMAIN}"; do
-		certbot certonly --standalone --non-interactive --agree-tos -m "${EMAIL}" -d "${name}"
-		tmpd="$(mktemp -d)"
-		# Dereference Certbot symlinks into real files for install_cert / Podman bind mounts
-		sudo cat "/etc/letsencrypt/live/${name}/fullchain.pem" >"${tmpd}/fullchain.pem"
-		sudo cat "/etc/letsencrypt/live/${name}/privkey.pem" >"${tmpd}/privkey.pem"
-		chmod 644 "${tmpd}/fullchain.pem"
-		chmod 600 "${tmpd}/privkey.pem"
-		install_cert "${name}" "${tmpd}/fullchain.pem" "${tmpd}/privkey.pem"
-		rm -rf "${tmpd}"
+		certbot certonly --standalone --non-interactive --agree-tos \
+			--config-dir "${SSL_ROOT}" \
+			--work-dir "${SSL_WORK_DIR}" \
+			--logs-dir "${SSL_LOGS_DIR}" \
+			-m "${EMAIL}" -d "${name}"
 	done
 	gen_self_signed_ip "${IP_ADDRESS}"
 fi
@@ -155,7 +155,7 @@ ENV
 echo ""
 echo "Done."
 echo "  DOMAIN=${DOMAIN}  IP_ADDRESS=${IP_ADDRESS}"
-echo "  TLS material: /etc/letsencrypt/live/<hostname>/ (mounted into capy_front and capy_core)"
+echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy_front and capy_core)"
 echo "  Wrote ${ROOT}/.env and ${ROOT}/Caddyfile"
 echo ""
 echo "Next:  podman compose up -d --build"
