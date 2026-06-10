@@ -129,7 +129,7 @@ else
 	echo "Ensure ports 80 and 443 are free (e.g. podman compose down) before certbot runs."
 	read -rp "Press Enter to continue..."
 	for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "${DOMAIN}"; do
-		sudo certbot certonly --standalone --non-interactive --agree-tos -m "${EMAIL}" -d "${name}"
+		certbot certonly --standalone --non-interactive --agree-tos -m "${EMAIL}" -d "${name}"
 		tmpd="$(mktemp -d)"
 		# Dereference Certbot symlinks into real files for install_cert / Podman bind mounts
 		sudo cat "/etc/letsencrypt/live/${name}/fullchain.pem" >"${tmpd}/fullchain.pem"
