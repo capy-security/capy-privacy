@@ -90,13 +90,13 @@ write_caddyfile() {
 
 read_existing_env() {
 	[[ -f "$ENV_FILE" ]] || return 0
-	while IFS='=' read -r key value; do
-		case "$key" in
-		DOMAIN) EXISTING_DOMAIN="$value" ;;
-		IP_ADDRESS) EXISTING_IP_ADDRESS="$value" ;;
-		API_SECRET) EXISTING_API_SECRET="$value" ;;
+	while IFS= read -r line; do
+		case "$line" in
+		DOMAIN=*) EXISTING_DOMAIN="${line#DOMAIN=}" ;;
+		IP_ADDRESS=*) EXISTING_IP_ADDRESS="${line#IP_ADDRESS=}" ;;
+		API_SECRET=*) EXISTING_API_SECRET="${line#API_SECRET=}" ;;
 		esac
-	done < <(rg '^(DOMAIN|IP_ADDRESS|API_SECRET)=' "$ENV_FILE" || true)
+	done < "$ENV_FILE"
 }
 
 # --- prompts -----------------------------------------------------------------
