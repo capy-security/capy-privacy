@@ -36,7 +36,7 @@ services:
       - capy_api
     volumes:
       - ./resources/database/:/var/capy/database/:Z
-      - /etc/letsencrypt/:/etc/letsencrypt/:ro,Z
+      - /etc/letsencrypt/:/etc/letsencrypt/:O
     ports:
       - "53:53/udp"
       - "5300:5300/tcp"
@@ -65,9 +65,9 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
-      - /etc/letsencrypt/:/etc/letsencrypt/:ro,Z
-      - /var/www/:/var/www/:ro,Z
+      - ./Caddyfile:/etc/caddy/Caddyfile:O
+      - /etc/letsencrypt/:/etc/letsencrypt/:O
+      - /var/www/:/var/www/:O
       - /var/log/caddy/:/var/log/caddy/:Z
     ports:
       - '80:80/tcp'
