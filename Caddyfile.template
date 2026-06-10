@@ -17,7 +17,7 @@ https://${API_DOMAIN} {
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	reverse_proxy capy_api:8080 {
+	reverse_proxy capy-api:8080 {
 		header_up Host {http.request.host}
 		header_up X-Real-IP {http.request.remote.host}
 		header_up X-Forwarded-For {http.request.remote.host}
@@ -78,7 +78,7 @@ ${DNS_DOMAIN} {
 	root * /var/capy/admin
 
 	handle /dns-query {
-		reverse_proxy https://capy_core:5300 {
+		reverse_proxy https://capy-core:5300 {
 			transport http {
 				read_timeout 10s
 				write_timeout 10s

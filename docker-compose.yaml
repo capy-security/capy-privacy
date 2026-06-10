@@ -8,6 +8,11 @@ services:
     env_file: .env
     environment:
       API_ENV: "production"
+      CORE_HOST: "capy-core"
+    networks:
+      default:
+        aliases:
+          - capy-api
     volumes:
       - ./resources/database/:/var/capy/database/:Z
     ports:
@@ -32,6 +37,10 @@ services:
     env_file: .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+    networks:
+      default:
+        aliases:
+          - capy-core
     depends_on:
       - capy_api
     volumes:
@@ -64,6 +73,10 @@ services:
       - capy_core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+    networks:
+      default:
+        aliases:
+          - capy-front
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
