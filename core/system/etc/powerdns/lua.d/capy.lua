@@ -2,6 +2,34 @@
 driver = require "luasql.sqlite3"
 env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
+local decision_cache = {}
+local decision_cache_ttl_seconds = 10
+
+local function cache_key(client_ip, domain)
+    return client_ip .. "|" .. domain
+end
+
+local function cache_get(key)
+    local entry = decision_cache[key]
+    if not entry then
+        return nil
+    end
+
+    if entry.expires_at <= os.time() then
+        decision_cache[key] = nil
+        return nil
+    end
+
+    return entry
+end
+
+local function cache_set(key, blocked, domain_ip)
+    decision_cache[key] = {
+        blocked = blocked,
+        domain_ip = domain_ip,
+        expires_at = os.time() + decision_cache_ttl_seconds
+    }
+end
 
 
 -- Function to attempt database connection
@@ -24,15 +52,10 @@ con = connect_database()
 
 
 function preresolve(dq)
-
-    -- Check if database connection is available, try to reconnect if needed
-    if not con then
-        -- Attempt to reconnect (in case database was created after script load)
-        con = connect_database()
-        if not con then
-            pdnslog("Database connection not available, skipping lookup", pdns.loglevels.Warning)
-            return false
-        end
+    -- For now only enforce sinkhole policy on IPv4 A queries.
+    -- All other qtypes are forwarded to normal recursion.
+    if dq.qtype ~= pdns.A then
+        return false
     end
 
     -- Get the queried domain and client IP
@@ -45,6 +68,30 @@ function preresolve(dq)
     local domain = domain_with_dot:match("^(.*)%.$") or domain_with_dot
     
     pdnslog(string.format("DOMAIN:%s / IP:%s", domain, client_ip), pdns.loglevels.Debug)
+
+    local key = cache_key(client_ip, domain)
+    local cached = cache_get(key)
+    if cached then
+        if cached.blocked and cached.domain_ip then
+            pdnslog(string.format("CACHE BLOCKED: %s -> %s (client: %s)", domain, cached.domain_ip, client_ip), pdns.loglevels.Debug)
+            dq.rcode=0 -- make it a normal answer
+            dq:addAnswer( pdns.A, cached.domain_ip )
+            return true
+        end
+
+        pdnslog(string.format("CACHE ALLOWED: %s (client: %s)", domain, client_ip), pdns.loglevels.Debug)
+        return false
+    end
+
+    -- Check if database connection is available, try to reconnect if needed
+    if not con then
+        -- Attempt to reconnect (in case database was created after script load)
+        con = connect_database()
+        if not con then
+            pdnslog("Database connection not available, skipping lookup", pdns.loglevels.Warning)
+            return false
+        end
+    end
 
     -- Escape values once for reuse
     local escaped_client_ip = con:escape( client_ip )
@@ -70,17 +117,23 @@ function preresolve(dq)
 
     -- execute the sql query
     local result, error = exec_sql(request)
+    if error ~= "" then
+        pdnslog(string.format("SQL lookup failed for domain=%s client=%s: %s", domain, client_ip, error), pdns.loglevels.Error)
+        return false
+    end
     -- if result is a non empty array of objets
     local next = next
     if next(result) then
         local domain_ip = result[1].domain_ip
         local domain_name = result[1].name
         pdnslog(string.format("BLOCKED: %s -> %s (client: %s)", domain_name, domain_ip, client_ip), pdns.loglevels.Debug)
+        cache_set(key, true, domain_ip)
         dq.rcode=0 -- make it a normal answer
         dq:addAnswer( pdns.A, domain_ip )
         -- con:close()
         return true
     else
+        cache_set(key, false, nil)
         -- pdnslog("domain not found in blacklist", pdns.loglevels.Info)
         -- con:close()
         return false
