@@ -11,7 +11,7 @@ services:
       API_ENV: "production"
       CORE_HOST: "capy-core"
     networks:
-      - capy-network
+      - capy
     volumes:
       - ./resources/database/:/var/capy/database/:Z
     ports:
@@ -38,7 +38,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     networks:
-      - capy-network
+      - capy
     depends_on:
       - capy-api
     volumes:
@@ -73,7 +73,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     networks:
-      - capy-network
+      - capy
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
@@ -98,5 +98,5 @@ volumes:
   capy_database:
 
 networks:
-  capy-network:
+  capy:
     driver: bridge
