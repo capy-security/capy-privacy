@@ -10,6 +10,10 @@ services:
     environment:
       API_ENV: "production"
       CORE_HOST: "capy-core"
+    dns:
+      - 127.0.0.11
+    dns_search:
+      - capy-network
     networks:
       - capy-network
     volumes:
@@ -37,6 +41,10 @@ services:
     env_file: .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+    dns:
+      - 127.0.0.11
+    dns_search:
+      - capy-network
     networks:
       - capy-network
     depends_on:
@@ -72,6 +80,10 @@ services:
       - capy-core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+    dns:
+      - 127.0.0.11
+    dns_search:
+      - capy-network
     networks:
       - capy-network
     volumes:
