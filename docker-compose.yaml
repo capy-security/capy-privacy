@@ -10,16 +10,12 @@ services:
     environment:
       API_ENV: "production"
       CORE_HOST: "capy-core"
-    dns:
-      - 127.0.0.11
-    dns_search:
-      - capy-network
     networks:
       - capy-network
     volumes:
       - ./resources/database/:/var/capy/database/:Z
     ports:
-      - "127.0.0.1:8080:8080/tcp"
+      - "8080:8080/tcp"
     expose:
       - "8080"
     healthcheck:
@@ -41,10 +37,6 @@ services:
     env_file: .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
-    dns:
-      - 127.0.0.11
-    dns_search:
-      - capy-network
     networks:
       - capy-network
     depends_on:
@@ -80,10 +72,6 @@ services:
       - capy-core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
-    dns:
-      - 127.0.0.11
-    dns_search:
-      - capy-network
     networks:
       - capy-network
     volumes:
