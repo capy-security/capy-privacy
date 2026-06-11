@@ -91,7 +91,7 @@ services:
 volumes:
   capy_database:
 
-networks:
-  default:
-    name: capy-network
-    driver: bridge
+# networks:
+#   default:
+#     name: capy-network
+#     driver: bridge
