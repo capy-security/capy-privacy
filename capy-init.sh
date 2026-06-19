@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Capy Privacy — first-time setup: TLS, Caddyfile, .env
+# Capy Privacy — first-time setup: TLS, .env
 # Usage: ./init.sh   (from repo root; stores cert material in ./ssl)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
-CADDY_TEMPLATE="${ROOT}/Caddyfile.template"
 ENV_FILE="${ROOT}/.env"
 SSL_ROOT="${ROOT}/ssl"
 SSL_WORK_DIR="${SSL_ROOT}/work"
@@ -15,7 +14,6 @@ REUSE_EXISTING_SETUP=0
 EXISTING_DOMAIN=""
 EXISTING_IP_ADDRESS=""
 EXISTING_API_SECRET=""
-RUN_CADDYFILE=0
 RUN_CERTIFICATES=0
 CLI_DOMAIN=""
 CLI_IP_ADDRESS=""
@@ -70,28 +68,6 @@ guess_public_ip() {
 	echo "${ip:-}"
 }
 
-write_caddyfile() {
-	local api_domain="$1" admin_domain="$2" dns_domain="$3" domain="$4" ip="$5"
-	local out="${ROOT}/Caddyfile"
-	if [[ ! -f "$CADDY_TEMPLATE" ]]; then
-		echo "Missing Caddy template: ${CADDY_TEMPLATE}" >&2
-		exit 1
-	fi
-
-	if ! command -v envsubst >/dev/null 2>&1; then
-		echo "envsubst is required to render ${CADDY_TEMPLATE}. Install gettext (e.g. brew install gettext)." >&2
-		exit 1
-	fi
-
-	API_DOMAIN="$api_domain" \
-	ADMIN_DOMAIN="$admin_domain" \
-	DNS_DOMAIN="$dns_domain" \
-	DOMAIN="$domain" \
-	IP_ADDRESS="$ip" \
-		envsubst '${API_DOMAIN} ${ADMIN_DOMAIN} ${DNS_DOMAIN} ${DOMAIN} ${IP_ADDRESS}' \
-			<"$CADDY_TEMPLATE" >"$out"
-}
-
 read_existing_env() {
 	[[ -f "$ENV_FILE" ]] || return 0
 	while IFS= read -r line; do
@@ -105,23 +81,16 @@ read_existing_env() {
 
 print_usage() {
 	cat <<'EOF'
-Usage: ./init.sh [--caddyfile] [--certificates] [--domain <domain>] [--ip <ip>] [--help]
+Usage: ./init.sh [--certificates] [--domain <domain>] [--ip <ip>] [--help]
 
-Workflows:
-  --caddyfile      Create/renew Caddyfile from Caddyfile.template
-  --certificates   Create/renew certificates under ./ssl/live
-
-If no workflow flag is provided, both workflows run.
+Options:
+  --certificates   Create/renew certificates under ./ssl/live (default when no flag is given)
 EOF
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--caddyfile)
-			RUN_CADDYFILE=1
-			shift
-			;;
 		--certificates)
 			RUN_CERTIFICATES=1
 			shift
@@ -148,8 +117,7 @@ parse_args() {
 		esac
 	done
 
-	if [[ "$RUN_CADDYFILE" -eq 0 && "$RUN_CERTIFICATES" -eq 0 ]]; then
-		RUN_CADDYFILE=1
+	if [[ "$RUN_CERTIFICATES" -eq 0 ]]; then
 		RUN_CERTIFICATES=1
 	fi
 }
@@ -237,10 +205,6 @@ if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
 	fi
 fi
 
-if [[ "$RUN_CADDYFILE" -eq 1 ]]; then
-	write_caddyfile "${API_DOMAIN}" "${ADMIN_DOMAIN}" "${DNS_DOMAIN}" "${DOMAIN}" "${IP_ADDRESS}"
-fi
-
 API_SECRET="${EXISTING_API_SECRET:-}"
 if [[ -z "$API_SECRET" ]]; then
 	API_SECRET="$(openssl rand -base64 32)"
@@ -257,9 +221,6 @@ echo "Done."
 echo "  DOMAIN=${DOMAIN}  IP_ADDRESS=${IP_ADDRESS}"
 if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
 	echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and capy-core)"
-fi
-if [[ "$RUN_CADDYFILE" -eq 1 ]]; then
-	echo "  Wrote ${ROOT}/Caddyfile"
 fi
 echo "  Wrote ${ROOT}/.env"
 echo ""

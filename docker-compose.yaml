@@ -68,8 +68,13 @@ services:
       - capy-core
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+      API_DOMAIN: api.${DOMAIN:-localhost}
+      ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
+      DNS_DOMAIN: dns.${DOMAIN:-localhost}
+      IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - ${CADDY_CONF_D:-./caddy-conf.d}:/etc/caddy/conf.d:ro,Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
       - /var/www/:/var/www/:ro,Z
       - /var/log/caddy/:/var/log/caddy/:Z
