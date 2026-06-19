@@ -1,7 +1,7 @@
 # Capy Privacy — base reverse proxy (api, admin, dns, block page)
 # Domains from container env: DOMAIN, API_DOMAIN, ADMIN_DOMAIN, DNS_DOMAIN, IP_ADDRESS
 # TLS under /etc/letsencrypt/live/<name>/ (bind-mount ./ssl in compose)
-# Custom vhosts: drop *.caddy files in conf.d/ (see caddy-conf.d/apex.caddy.example)
+# Custom vhosts: drop *.caddy files in /etc/caddy/conf.d/ on the host (see caddy-conf.d/apex.caddy.example in repo)
 
 # -----------------------------------------------------------------------------
 # API - FastAPI backend
@@ -21,9 +21,6 @@ https://{$API_DOMAIN} {
 	reverse_proxy capy-api:8080 {
 		header_up Host {http.request.host}
 		header_up X-Real-IP {http.request.remote.host}
-		header_up X-Forwarded-For {http.request.remote.host}
-		header_up X-Forwarded-Proto {http.request.scheme}
-		header_up X-Forwarded-Host {http.request.host}
 		header_up X-Forwarded-Port {http.request.port}
 		transport http {
 			read_timeout 60s
@@ -122,6 +119,6 @@ https://{$IP_ADDRESS} {
 }
 
 # -----------------------------------------------------------------------------
-# User custom vhosts (*.caddy in conf.d/ — empty dir is fine)
+# User custom vhosts — host /etc/caddy/conf.d/*.caddy (mounted as container conf.d/)
 # -----------------------------------------------------------------------------
 import conf.d/*.caddy

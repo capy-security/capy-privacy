@@ -205,6 +205,13 @@ if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
 	fi
 fi
 
+CADDY_CONF_D="/etc/caddy/conf.d"
+if [[ ! -d "$CADDY_CONF_D" ]]; then
+	if ! mkdir -p "$CADDY_CONF_D" 2>/dev/null; then
+		sudo mkdir -p "$CADDY_CONF_D"
+	fi
+fi
+
 API_SECRET="${EXISTING_API_SECRET:-}"
 if [[ -z "$API_SECRET" ]]; then
 	API_SECRET="$(openssl rand -base64 32)"
@@ -223,6 +230,7 @@ if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
 	echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and capy-core)"
 fi
 echo "  Wrote ${ROOT}/.env"
+echo "  Custom Caddy vhosts: ${CADDY_CONF_D}/*.caddy (template: ${ROOT}/caddy-conf.d/apex.caddy.example)"
 echo ""
 echo "Next:  podman compose up -d --build"
 echo "Note: Rebuild capy-front after DOMAIN changes — VITE_API_URL is http://api.<DOMAIN>/ from compose (set https in compose if you need TLS for the API in the browser)."

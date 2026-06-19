@@ -1,5 +1,5 @@
 # Apex domain — static site from host /var/www (mounted in compose)
-# Enable: cp apex.caddy.example apex.caddy  (only *.caddy files are loaded)
+# Copy to /etc/caddy/conf.d/apex.caddy on the host
 
 {$DOMAIN} {
 	tls /etc/letsencrypt/live/{$DOMAIN}/fullchain.pem /etc/letsencrypt/live/{$DOMAIN}/privkey.pem

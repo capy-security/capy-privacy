@@ -74,8 +74,8 @@ services:
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
-      - ${CADDY_CONF_D:-./caddy-conf.d}:/etc/caddy/conf.d:ro,Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
+      - /etc/caddy/conf.d:/etc/caddy/conf.d:ro,Z  # host custom vhosts (*.caddy)
       - /var/www/:/var/www/:ro,Z
       - /var/log/caddy/:/var/log/caddy/:Z
     ports:
