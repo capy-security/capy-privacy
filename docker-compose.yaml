@@ -22,6 +22,8 @@ services:
       timeout: 3s
       retries: 10
       start_period: 15s
+    networks:
+      - capy-internal
     build:
       context: ./api
       args:
@@ -52,6 +54,8 @@ services:
       nofile:
         soft: 16000
         hard: 16000
+    networks:
+      - capy-internal
     build:
       context: ./core
       args:
@@ -84,6 +88,9 @@ services:
     expose:
       - '80'
       - '443'
+    networks:
+      - capy-internal
+      - capy-network
     build:
       context: .
       dockerfile: front/Dockerfile
@@ -97,6 +104,7 @@ volumes:
   capy_database:
 
 networks:
-  default:
-    name: capy-network
-#     driver: bridge
+  capy-internal:
+    driver: bridge
+  capy-network:
+    external: true
