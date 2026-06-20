@@ -14,7 +14,6 @@ REUSE_EXISTING_SETUP=0
 EXISTING_DOMAIN=""
 EXISTING_IP_ADDRESS=""
 EXISTING_API_SECRET=""
-RUN_CERTIFICATES=0
 CLI_DOMAIN=""
 CLI_IP_ADDRESS=""
 
@@ -81,20 +80,15 @@ read_existing_env() {
 
 print_usage() {
 	cat <<'EOF'
-Usage: ./init.sh [--certificates] [--domain <domain>] [--ip <ip>] [--help]
+Usage: ./init.sh [--domain <domain>] [--ip <ip>] [--help]
 
-Options:
-  --certificates   Create/renew certificates under ./ssl/live (default when no flag is given)
+Creates .env and TLS material under ./ssl/live (for compose bind mounts).
 EOF
 }
 
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--certificates)
-			RUN_CERTIFICATES=1
-			shift
-			;;
 		--domain)
 			[[ $# -ge 2 ]] || { echo "Missing value for --domain" >&2; exit 1; }
 			CLI_DOMAIN="$2"
@@ -116,10 +110,6 @@ parse_args() {
 			;;
 		esac
 	done
-
-	if [[ "$RUN_CERTIFICATES" -eq 0 ]]; then
-		RUN_CERTIFICATES=1
-	fi
 }
 
 resolve_setup_values() {
@@ -160,56 +150,52 @@ ADMIN_DOMAIN="admin.${DOMAIN}"
 DNS_DOMAIN="dns.${DOMAIN}"
 
 # --- certificates ------------------------------------------------------------
-if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
-	mkdir -p "${SSL_ROOT}" "${SSL_WORK_DIR}" "${SSL_LOGS_DIR}"
+mkdir -p "${SSL_ROOT}" "${SSL_WORK_DIR}" "${SSL_LOGS_DIR}"
 
-	if [[ "$DOMAIN" == "localhost" ]]; then
-		if ! command -v mkcert >/dev/null 2>&1; then
-			echo "mkcert is required for localhost TLS. Install e.g.:  brew install mkcert && mkcert -install" >&2
-			exit 1
-		fi
-		mkcert -install >/dev/null 2>&1 || true
-		for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "localhost" "127.0.0.1"; do
-			tmpd="$(mktemp -d)"
-			mkcert -cert-file "${tmpd}/fullchain.pem" -key-file "${tmpd}/privkey.pem" "${name}"
-			install_cert "${name}" "${tmpd}/fullchain.pem" "${tmpd}/privkey.pem"
-			rm -rf "${tmpd}"
-		done
+if [[ "$DOMAIN" == "localhost" ]]; then
+	if ! command -v mkcert >/dev/null 2>&1; then
+		echo "mkcert is required for localhost TLS. Install e.g.:  brew install mkcert && mkcert -install" >&2
+		exit 1
+	fi
+	mkcert -install >/dev/null 2>&1 || true
+	for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "localhost" "127.0.0.1"; do
+		tmpd="$(mktemp -d)"
+		mkcert -cert-file "${tmpd}/fullchain.pem" -key-file "${tmpd}/privkey.pem" "${name}"
+		install_cert "${name}" "${tmpd}/fullchain.pem" "${tmpd}/privkey.pem"
+		rm -rf "${tmpd}"
+	done
+else
+	if ! command -v certbot >/dev/null 2>&1; then
+		echo "certbot is required for Let's Encrypt. Install certbot on this host." >&2
+		exit 1
+	fi
+	echo "Ensure ports 80 and 443 are free (e.g. podman compose down) before certbot runs."
+	read -rp "Press Enter to continue..."
+	if [[ "$REUSE_EXISTING_SETUP" -eq 1 && -d "${SSL_ROOT}/renewal" ]] && compgen -G "${SSL_ROOT}/renewal/*.conf" >/dev/null; then
+		certbot renew --standalone --non-interactive \
+			--config-dir "${SSL_ROOT}" \
+			--work-dir "${SSL_WORK_DIR}" \
+			--logs-dir "${SSL_LOGS_DIR}"
 	else
-		if ! command -v certbot >/dev/null 2>&1; then
-			echo "certbot is required for Let's Encrypt. Install certbot on this host." >&2
+		read -rp "Let's Encrypt email: " EMAIL
+		if [[ -z "${EMAIL:-}" ]]; then
+			echo "Email is required for certbot -agree-tos." >&2
 			exit 1
 		fi
-		echo "Ensure ports 80 and 443 are free (e.g. podman compose down) before certbot runs."
-		read -rp "Press Enter to continue..."
-		if [[ "$REUSE_EXISTING_SETUP" -eq 1 && -d "${SSL_ROOT}/renewal" ]] && compgen -G "${SSL_ROOT}/renewal/*.conf" >/dev/null; then
-			certbot renew --standalone --non-interactive \
+		for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "${DOMAIN}"; do
+			certbot certonly --standalone --non-interactive --agree-tos \
 				--config-dir "${SSL_ROOT}" \
 				--work-dir "${SSL_WORK_DIR}" \
-				--logs-dir "${SSL_LOGS_DIR}"
-		else
-			read -rp "Let's Encrypt email: " EMAIL
-			if [[ -z "${EMAIL:-}" ]]; then
-				echo "Email is required for certbot -agree-tos." >&2
-				exit 1
-			fi
-			for name in "${API_DOMAIN}" "${DNS_DOMAIN}" "${ADMIN_DOMAIN}" "${DOMAIN}"; do
-				certbot certonly --standalone --non-interactive --agree-tos \
-					--config-dir "${SSL_ROOT}" \
-					--work-dir "${SSL_WORK_DIR}" \
-					--logs-dir "${SSL_LOGS_DIR}" \
-					-m "${EMAIL}" -d "${name}"
-			done
-		fi
-		gen_self_signed_ip "${IP_ADDRESS}"
+				--logs-dir "${SSL_LOGS_DIR}" \
+				-m "${EMAIL}" -d "${name}"
+		done
 	fi
+	gen_self_signed_ip "${IP_ADDRESS}"
 fi
 
-CADDY_CONF_D="/etc/caddy/conf.d"
-if [[ ! -d "$CADDY_CONF_D" ]]; then
-	if ! mkdir -p "$CADDY_CONF_D" 2>/dev/null; then
-		sudo mkdir -p "$CADDY_CONF_D"
-	fi
+# Host custom vhosts dir (compose: /etc/caddy/conf.d → container /etc/caddy/conf.d)
+if [[ ! -d /etc/caddy/conf.d ]]; then
+	mkdir -p /etc/caddy/conf.d 2>/dev/null || sudo mkdir -p /etc/caddy/conf.d
 fi
 
 API_SECRET="${EXISTING_API_SECRET:-}"
@@ -226,11 +212,9 @@ ENV
 echo ""
 echo "Done."
 echo "  DOMAIN=${DOMAIN}  IP_ADDRESS=${IP_ADDRESS}"
-if [[ "$RUN_CERTIFICATES" -eq 1 ]]; then
-	echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and capy-core)"
-fi
+echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and capy-core)"
 echo "  Wrote ${ROOT}/.env"
-echo "  Custom Caddy vhosts: ${CADDY_CONF_D}/*.caddy (template: ${ROOT}/caddy-conf.d/apex.caddy.example)"
+echo "  Custom Caddy vhosts: /etc/caddy/conf.d/*.caddy (example: ${ROOT}/caddy-conf.d/apex.caddy.example)"
 echo ""
 echo "Next:  podman compose up -d --build"
 echo "Note: Rebuild capy-front after DOMAIN changes — VITE_API_URL is http://api.<DOMAIN>/ from compose (set https in compose if you need TLS for the API in the browser)."
