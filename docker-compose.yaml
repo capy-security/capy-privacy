@@ -1,6 +1,6 @@
 # Base domain (e.g. capysecurity.com). API/DNS/Admin are always api.$DOMAIN, dns.$DOMAIN, admin.$DOMAIN.
 # Set DOMAIN (and optionally IP_ADDRESS) in .env.
-# This compose file is standardized for `podman compose`.
+# Docker Compose on Debian — run: sudo docker compose up -d --build
 services:
   capy-api:
     image: capy-api:latest
@@ -9,7 +9,7 @@ services:
     env_file: .env
     environment:
       API_ENV: "production"
-      CORE_HOST: ${CORE_HOST:-host.containers.internal}
+      CORE_HOST: ${CORE_HOST:-host.docker.internal}
     extra_hosts:
       - "host.containers.internal:host-gateway"
       - "host.docker.internal:host-gateway"
@@ -70,7 +70,7 @@ services:
       ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
       DNS_DOMAIN: dns.${DOMAIN:-localhost}
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
-      CORE_HOST: ${CORE_HOST:-host.containers.internal}
+      CORE_HOST: ${CORE_HOST:-host.docker.internal}
     extra_hosts:
       - "host.containers.internal:host-gateway"
       - "host.docker.internal:host-gateway"

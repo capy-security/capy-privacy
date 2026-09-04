@@ -1,5 +1,5 @@
 # Capy Privacy — base reverse proxy (api, admin, dns, block page)
-# Domains from container env: DOMAIN, API_DOMAIN, ADMIN_DOMAIN, DNS_DOMAIN, IP_ADDRESS
+# Domains from container env: DOMAIN, API_DOMAIN, ADMIN_DOMAIN, DNS_DOMAIN, IP_ADDRESS, CORE_HOST
 # TLS under /etc/letsencrypt/live/<name>/ (bind-mount ./ssl in compose)
 # Custom vhosts: drop *.caddy files in /etc/caddy/conf.d/ on the host (see caddy-conf.d/apex.caddy.example in repo)
 
@@ -76,7 +76,7 @@ https://{$ADMIN_DOMAIN} {
 	root * /var/capy/admin
 
 	handle /dns-query {
-		reverse_proxy https://{$CORE_HOST}:5300 {
+		reverse_proxy https://{$CORE_HOST:host.docker.internal}:5300 {
 			transport http {
 				read_timeout 10s
 				write_timeout 10s
