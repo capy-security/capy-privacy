@@ -9,7 +9,10 @@ services:
     env_file: .env
     environment:
       API_ENV: "production"
-      CORE_HOST: "capy-core"
+      CORE_HOST: ${CORE_HOST:-host.containers.internal}
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./resources/database/:/var/capy/database/:Z
     ports:
@@ -34,6 +37,7 @@ services:
     image: capy-core:latest
     container_name: capy-core
     restart: always
+    network_mode: host
     env_file: .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
@@ -42,35 +46,10 @@ services:
     volumes:
       - ./resources/database/:/var/capy/database/:Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
-    ports:
-      # Plain DNS (recursor) — IPv4 + IPv6
-      - "53:53/udp"
-      - target: 53
-        published: 53
-        protocol: udp
-        host_ip: "::"
-      # DoH (dnsdist) — IPv4 + IPv6
-      - "5300:5300/tcp"
-      - target: 5300
-        published: 5300
-        protocol: tcp
-        host_ip: "::"
-      # DoT (dnsdist) — IPv4 + IPv6
-      - "853:853/tcp"
-      - target: 853
-        published: 853
-        protocol: tcp
-        host_ip: "::"
-    expose:
-      - "53"
-      - "853"
-      - "5300"
     ulimits:
       nofile:
         soft: 16000
         hard: 16000
-    networks:
-      - capy-internal
     build:
       context: ./core
       args:
@@ -91,6 +70,10 @@ services:
       ADMIN_DOMAIN: admin.${DOMAIN:-localhost}
       DNS_DOMAIN: dns.${DOMAIN:-localhost}
       IP_ADDRESS: ${IP_ADDRESS:-127.0.0.1}
+      CORE_HOST: ${CORE_HOST:-host.containers.internal}
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - ./ssl/:/etc/letsencrypt/:ro,Z

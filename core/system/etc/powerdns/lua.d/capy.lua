@@ -3,7 +3,7 @@ driver = require "luasql.sqlite3"
 env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
 local decision_cache = {}
-local decision_cache_ttl_seconds = 10
+local decision_cache_ttl_seconds = 60
 
 local function cache_key(client_ip, domain)
     return client_ip .. "|" .. domain
