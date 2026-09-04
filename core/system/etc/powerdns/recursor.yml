@@ -6,10 +6,12 @@ recursor:
   tcp_threads: 1
 
 incoming:
+  # Internal only; dnsdist fronts public :53/:853/:5300
   listen:
-    - 0.0.0.0
-    - "::"
+    - 127.0.0.1:5353
   allow_from_file: /etc/powerdns/allow_from.yml
+  proxy_protocol_from:
+    - 127.0.0.0/8
   # No distributor/reuseport fan-out needed with one worker thread
   pdns_distributes_queries: false
   reuseport: false
