@@ -43,9 +43,24 @@ services:
       - ./resources/database/:/var/capy/database/:Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
     ports:
+      # Plain DNS (recursor) — IPv4 + IPv6
       - "53:53/udp"
+      - target: 53
+        published: 53
+        protocol: udp
+        host_ip: "::"
+      # DoH (dnsdist) — IPv4 + IPv6
       - "5300:5300/tcp"
+      - target: 5300
+        published: 5300
+        protocol: tcp
+        host_ip: "::"
+      # DoT (dnsdist) — IPv4 + IPv6
       - "853:853/tcp"
+      - target: 853
+        published: 853
+        protocol: tcp
+        host_ip: "::"
     expose:
       - "53"
       - "853"
