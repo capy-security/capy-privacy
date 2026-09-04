@@ -9,7 +9,6 @@ from api.database import get_database_fastapi, close_database
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.exceptions import register_exception_handlers
 
 # from fastapi.staticfiles import StaticFiles
 import logging
@@ -52,7 +51,6 @@ api.add_middleware(
     allow_headers=["*"],
 )
 # api.mount("/static", StaticFiles(directory="static"), name="static")
-register_exception_handlers(api)
 
 
 @api.get("/health")
