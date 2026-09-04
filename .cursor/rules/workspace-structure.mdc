@@ -19,3 +19,15 @@ This repo is the **capy-privacy** project: DNS privacy / filtering stack with a 
 - **api**: run from `api/` with Poetry (`poetry run python`, `poetry run pytest`, etc.).
 - **admin**: run from `admin/` with yarn (`yarn dev`, `yarn build`, `yarn api` for Orval).
 - **core** and **front** are built via Docker; see `docker-compose.yaml`.
+
+## Deploy (production VPS)
+
+Stack runs with **Docker Compose on Debian**. Use `sudo` for compose commands (privileged ports `53`, `80`, `443`, `853`).
+
+- Build/start: `sudo docker compose up -d --build`
+- Stop: `sudo docker compose down`
+- Logs: `sudo docker logs capy-core --tail 100`
+- Shell: `sudo docker exec -it capy-core /bin/sh`
+- Restart one service: `sudo docker compose up -d capy-core`
+
+Do not use Podman in docs or commands for this project.

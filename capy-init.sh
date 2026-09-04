@@ -169,7 +169,7 @@ else
 		echo "certbot is required for Let's Encrypt. Install certbot on this host." >&2
 		exit 1
 	fi
-	echo "Ensure ports 80 and 443 are free (e.g. podman compose down) before certbot runs."
+	echo "Ensure ports 80 and 443 are free (e.g. sudo docker compose down) before certbot runs."
 	read -rp "Press Enter to continue..."
 	if [[ "$REUSE_EXISTING_SETUP" -eq 1 && -d "${SSL_ROOT}/renewal" ]] && compgen -G "${SSL_ROOT}/renewal/*.conf" >/dev/null; then
 		certbot renew --standalone --non-interactive \
@@ -216,5 +216,5 @@ echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and 
 echo "  Wrote ${ROOT}/.env"
 echo "  Custom Caddy vhosts: /etc/caddy/conf.d/*.caddy (example: ${ROOT}/caddy-conf.d/apex.caddy.example)"
 echo ""
-echo "Next:  podman compose up -d --build"
+echo "Next:  sudo docker compose up -d --build"
 echo "Note: Rebuild capy-front after DOMAIN changes — VITE_API_URL is http://api.<DOMAIN>/ from compose (set https in compose if you need TLS for the API in the browser)."
