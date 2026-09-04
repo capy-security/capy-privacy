@@ -48,8 +48,8 @@ services:
       - ./ssl/:/etc/letsencrypt/:ro,Z
     ulimits:
       nofile:
-        soft: 16000
-        hard: 16000
+        soft: 65536
+        hard: 65536
     build:
       context: ./core
       args:
