@@ -8,7 +8,8 @@ globs: "admin/**"
 
 ## Yarn
 
-The **admin** folder is a Svelte (SvelteKit/Vite) app. Use yarn from that directory. Run commands from `admin/`. Use yarn only; do not use npm or pnpm.
+The **admin** folder is a Svelte (SvelteKit/Vite) app. Use yarn from that directory. 
+Run commands from `admin/`. Use yarn only; do not use npm or pnpm.
 
 Examples:
 
