@@ -51,5 +51,6 @@ RUN mkdir -p /var/capy/database/ \
 EXPOSE 53/udp
 EXPOSE 853/tcp
 EXPOSE 5300/tcp
+EXPOSE 5301/tcp
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
