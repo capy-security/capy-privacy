@@ -46,6 +46,7 @@ services:
     volumes:
       - ./resources/database/:/var/capy/database/:Z
       - ./ssl/:/etc/letsencrypt/:ro,Z
+      - ./core/system/etc/dnsdist/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro,Z
     ulimits:
       nofile:
         soft: 65536
