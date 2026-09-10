@@ -56,15 +56,15 @@ def _probe_udp_53(host: str) -> bool:
 @router.get("/health/", response_model=ApiResponse)
 async def system_health() -> ApiResponse:
     """
-    Probe capy-core DNS services (53/udp, 853/tcp, 5300/tcp) and return status.
+    Probe capy-core DNS services (53/udp, 853/tcp, 5301/tcp) and return status.
     Uses CORE_HOST env (default: capy-core) as target host.
     """
     host = os.environ.get("CORE_HOST", "capy-core")
     loop = asyncio.get_event_loop()
     udp53_ok = await loop.run_in_executor(None, _probe_udp_53, host)
     tcp853_ok = await _probe_tcp(host, 853)
-    tcp5300_ok = await _probe_tcp(host, 5300)
-    all_ok = udp53_ok and tcp853_ok and tcp5300_ok
+    tcp5301_ok = await _probe_tcp(host, 5301)
+    all_ok = udp53_ok and tcp853_ok and tcp5301_ok
     return ApiResponse(
         success=True,
         message="Core services OK" if all_ok else "One or more core probes failed",
@@ -72,7 +72,7 @@ async def system_health() -> ApiResponse:
             "host": host,
             "53/udp": "up" if udp53_ok else "down",
             "853/tcp": "up" if tcp853_ok else "down",
-            "5300/tcp": "up" if tcp5300_ok else "down",
+            "5301/tcp": "up" if tcp5301_ok else "down",
         },
     )
 

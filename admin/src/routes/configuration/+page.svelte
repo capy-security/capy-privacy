@@ -37,7 +37,7 @@
 	const serviceLabels: Record<string, string> = {
 		'53/udp': 'DNS (UDP)',
 		'853/tcp': 'DNS over TLS',
-		'5300/tcp': 'PowerDNS'
+		'5301/tcp': 'DNS over HTTPS (internal)'
 	};
 
 	// System info state
