@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DeleteGroupDatabaseGroupDeleteParams = {
-id?: number;
+export type DeleteBlockedIpDatabaseBlockedIpDeleteParams = {
+id?: number | null;
+ip?: string | null;
 };

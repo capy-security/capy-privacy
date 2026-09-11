@@ -5,7 +5,7 @@ export default defineConfig({
     capy: {
         input: {
             // Use URL to fetch from running API, or local file './openapi.json'
-            target: process.env.API_OPENAPI_URL || 'http://127.0.0.1/openapi.json',
+            target: process.env.API_OPENAPI_URL || 'http://127.0.0.1:8080/openapi.json',
         },
         output: {
             client: 'svelte-query',

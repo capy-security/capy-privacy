@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListCategoriesDatabaseCategoryGetParams = {
+export type ListBlockedIpsDatabaseBlockedIpGetParams = {
 /**
  * @minimum 0
  */

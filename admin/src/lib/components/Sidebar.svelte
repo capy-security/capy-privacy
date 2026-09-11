@@ -12,6 +12,7 @@
 		ChartBar,
 		UserCircle,
 		DocumentMagnifyingGlass,
+		Signal,
 		Cog6Tooth
 	} from 'svelte-heros-v2';
 
@@ -66,6 +67,7 @@
 	const isHomeActive = $derived(isActive('/'));
 	const isDomainsActive = $derived(isActive('/domains'));
 	const isClientsActive = $derived(isActive('/clients'));
+	const isClientIpsActive = $derived(isActive('/client-ips'));
 	const isCategoriesActive = $derived(isActive('/categories'));
 	const isGroupsActive = $derived(isActive('/groups'));
 	const isUsersActive = $derived(isActive('/users'));
@@ -143,6 +145,22 @@
 				>
 					<ComputerDesktop class="h-6 w-6 flex-shrink-0" />
 					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap">Clients</span>
+				</a>
+			</li>
+
+			<!-- Client IPs -->
+			<li>
+				<a
+					href="/client-ips"
+					class="flex items-center rounded-md py-2 text-white transition-colors {isExpanded
+						? 'md:justify-start md:px-3'
+						: ''} justify-center px-0 {isClientIpsActive ? 'bg-white/10' : 'hover:bg-white/10'}"
+					title="Client IPs"
+				>
+					<Signal class="h-6 w-6 flex-shrink-0" />
+					<span class="hidden {isExpanded ? 'md:inline' : ''} ml-3 whitespace-nowrap"
+						>Client IPs</span
+					>
 				</a>
 			</li>
 

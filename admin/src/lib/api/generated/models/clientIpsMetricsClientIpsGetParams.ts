@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListCategoriesDatabaseCategoryGetParams = {
+export type ClientIpsMetricsClientIpsGetParams = {
 /**
- * @minimum 0
+ * @minimum 1
  */
 page_number?: number;
 /**
@@ -16,11 +16,4 @@ page_number?: number;
  * @maximum 1000
  */
 items_per_page?: number;
-order_by?: string | null;
-filter_field?: string | null;
-filter_value?: string | null;
-/**
- * @pattern ^(eq|ne|gt|lt|gte|lte|like|in)$
- */
-filter_operator?: string;
 };

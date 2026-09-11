@@ -6,13 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Statistic {
+export interface BlockedIP {
   id?: number | null;
-  domain_id: number;
   /**
-     * @minLength 7
+     * @minLength 1
      * @maxLength 45
      */
-  client_ip: string;
-  request_count?: number;
+  ip: string;
+  /**
+     * @minLength 0
+     * @maxLength 128
+     */
+  reason?: string;
 }
