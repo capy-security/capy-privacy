@@ -147,6 +147,9 @@ func protobufToMetric(msg *pb.PBDNSMessage) Metric {
 		domain = question.GetQName()
 		// Remove trailing dot
 		domain = strings.TrimSuffix(domain, ".")
+		if domain == "" {
+			domain = "N/A"
+		}
 	}
 
 	// Get query type

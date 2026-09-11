@@ -120,7 +120,7 @@ class MetricDB(Model):
             id=self.id,
             timestamp=self.timestamp,
             client_ip=self.client_ip,
-            domain=self.domain,
+            domain=self.domain or "N/A",
             query_type=self.query_type,
             protocol=self.protocol,
             blocked=self.blocked,
