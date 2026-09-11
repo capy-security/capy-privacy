@@ -4,6 +4,8 @@ env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
 local decision_cache = {}
 local decision_cache_ttl_seconds = 60
+local ip_block_cache = {}
+local ip_block_cache_ttl_seconds = 60
 
 local function cache_key(client_ip, domain)
     return client_ip .. "|" .. domain
@@ -51,7 +53,44 @@ end
 con = connect_database()
 
 
+local function is_client_ip_blocked(client_ip)
+    local cache_entry = ip_block_cache[client_ip]
+    if cache_entry and cache_entry.expires_at > os.time() then
+        return cache_entry.blocked
+    end
+
+    if not con then
+        con = connect_database()
+        if not con then
+            return false
+        end
+    end
+
+    local escaped_client_ip = con:escape(client_ip)
+    local request = string.format(
+        "SELECT 1 FROM blocked_ip WHERE ip = '%s' LIMIT 1",
+        escaped_client_ip
+    )
+    local result, error = exec_sql(request)
+    local blocked = (error == "" and next(result) ~= nil)
+
+    ip_block_cache[client_ip] = {
+        blocked = blocked,
+        expires_at = os.time() + ip_block_cache_ttl_seconds,
+    }
+    return blocked
+end
+
+
 function preresolve(dq)
+    local client_ip = dq.remoteaddr:toString()
+
+    if is_client_ip_blocked(client_ip) then
+        pdnslog(string.format("IP BLOCKED: %s", client_ip), pdns.loglevels.Info)
+        dq.rcode = pdns.REFUSED
+        return true
+    end
+
     -- For now only enforce sinkhole policy on IPv4 A queries.
     -- All other qtypes are forwarded to normal recursion.
     if dq.qtype ~= pdns.A then
@@ -60,7 +99,6 @@ function preresolve(dq)
 
     -- Get the queried domain and client IP
     local domain_with_dot = (dq.qname:toString())
-    local client_ip = dq.remoteaddr:toString()
     
     -- Remove trailing dot from domain for database comparison
     -- PowerDNS always returns domains with trailing dot (e.g., "example.com.")
