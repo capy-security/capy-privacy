@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Client-side script: test DNS (recursor on 53, dnsdist DoH on 443 and DoT on 853).
+# Client-side script: test DNS (recursor on 53, dnsdist DoH on 443/5300 and DoT on 853).
 # DoH uses RFC 8484 POST (application/dns-message), not curl --doh-url + HTTPS fetch
 # (filtered names like test.<domain> -> 127.0.0.1 would otherwise yield HTTP 000).
 # Uses .env for DOMAIN and IP_ADDRESS, overridable with --domain / --ip.
@@ -61,8 +61,10 @@ TEST_DOMAINS=(example.com google.com cloudflare.com test.capysecurity.com)
 FILTER_DOMAIN="test.capysecurity.com"
 FILTER_EXPECTED_IP="127.0.0.1"
 
-DOH_URL="https://dns.${DOMAIN}/dns-query"
-DOH_RESOLVE="dns.${DOMAIN}:443:${IP_ADDRESS}"
+DOH_URL_443="https://dns.${DOMAIN}/dns-query"
+DOH_RESOLVE_443="dns.${DOMAIN}:443:${IP_ADDRESS}"
+DOH_URL_5300="https://dns.${DOMAIN}:5300/dns-query"
+DOH_RESOLVE_5300="dns.${DOMAIN}:5300:${IP_ADDRESS}"
 DOH_BODY=""
 
 calc_stats() {
@@ -109,8 +111,10 @@ sys.stdout.buffer.write(pkt)
 " "$domain" 2>/dev/null
 }
 
-doh_query_ms() {
+doh_query_ms_at() {
   local domain=$1
+  local url=$2
+  local resolve=$3
   local seconds ms code
 
   if ! command -v python3 &>/dev/null; then
@@ -118,10 +122,10 @@ doh_query_ms() {
     return 1
   fi
 
-  code=$(build_doh_query "$domain" | curl -sk -X POST "$DOH_URL" \
+  code=$(build_doh_query "$domain" | curl -sk -X POST "$url" \
     -H 'Content-Type: application/dns-message' \
     -H 'Accept: application/dns-message' \
-    --resolve "$DOH_RESOLVE" \
+    --resolve "$resolve" \
     --data-binary @- \
     --max-time 10 \
     -o "$DOH_BODY" \
@@ -138,6 +142,109 @@ doh_query_ms() {
   seconds="${code##* }"
   ms=$(awk -v s="$seconds" 'BEGIN { printf "%.1f", s * 1000 }')
   echo "$ms"
+}
+
+doh_query_ms_443() {
+  doh_query_ms_at "$1" "$DOH_URL_443" "$DOH_RESOLVE_443"
+}
+
+doh_query_ms_5300() {
+  doh_query_ms_at "$1" "$DOH_URL_5300" "$DOH_RESOLVE_5300"
+}
+
+run_doh_functional() {
+  local url=$1
+  local resolve=$2
+  local title=$3
+  local -n ok_ref=$4
+  local -n fail_ref=$5
+  local d code ips
+
+  echo ""
+  echo "$title"
+  ok_ref=0
+  fail_ref=0
+
+  if ! command -v python3 &>/dev/null; then
+    echo "  Skip  (python3 required for DoH wire-format query/parse)"
+    return 0
+  fi
+
+  for d in "${TEST_DOMAINS[@]}"; do
+    code=$(build_doh_query "$d" | curl -sk -X POST "$url" \
+      -H 'Content-Type: application/dns-message' \
+      -H 'Accept: application/dns-message' \
+      --resolve "$resolve" \
+      --data-binary @- \
+      --max-time 10 \
+      -o "$DOH_BODY" -w '%{http_code}' 2>/dev/null) || code="000"
+
+    if [[ "$code" == "000" ]] && [[ ! -s "$DOH_BODY" ]]; then
+      echo "  FAIL $d (curl error or empty response)"
+      ((fail_ref++)) || true
+      continue
+    fi
+
+    if [[ "$code" != "200" ]]; then
+      echo "  FAIL $d (HTTP $code)"
+      ((fail_ref++)) || true
+      continue
+    fi
+
+    ips=$(python3 -c "
+import struct, sys
+data = sys.stdin.buffer.read()
+if len(data) < 12:
+    sys.exit(1)
+qdcount = struct.unpack_from('!H', data, 4)[0]
+ancount = struct.unpack_from('!H', data, 6)[0]
+pos = 12
+for _ in range(qdcount):
+    while pos < len(data) and data[pos]:
+        pos += 1 + data[pos]
+    pos += 5
+out = []
+for _ in range(ancount):
+    if pos >= len(data):
+        break
+    while pos < len(data):
+        if data[pos] & 0xC0 == 0xC0:
+            pos += 2
+            break
+        if data[pos] == 0:
+            pos += 1
+            break
+        pos += 1 + data[pos]
+    if pos + 10 > len(data):
+        break
+    rtype, _, _, rdlen = struct.unpack_from('!HHIH', data, pos)
+    pos += 10
+    if rtype == 1 and rdlen == 4:
+        out.append('.'.join(str(b) for b in data[pos : pos + 4]))
+    pos += rdlen
+print(' '.join(out))
+" <"$DOH_BODY" 2>/dev/null) || ips=""
+
+    if [[ -z "$ips" ]]; then
+      echo "  FAIL $d (HTTP 200 but no A record in answer)"
+      ((fail_ref++)) || true
+      continue
+    fi
+
+    if [[ "$d" == "$FILTER_DOMAIN" ]]; then
+      if [[ "$ips" == *"$FILTER_EXPECTED_IP"* ]]; then
+        echo "  OK   $d -> $ips (filtering)"
+        ((ok_ref++)) || true
+      else
+        echo "  FAIL $d -> $ips (expected $FILTER_EXPECTED_IP for filtering)"
+        ((fail_ref++)) || true
+      fi
+    else
+      echo "  OK   $d -> $ips"
+      ((ok_ref++)) || true
+    fi
+  done
+  echo "  DoH: $ok_ref passed, $fail_ref failed"
 }
 
 dot_query_ms() {
@@ -217,93 +324,18 @@ for d in "${TEST_DOMAINS[@]}"; do
 done
 echo "  Recursor: $RECURSOR_OK passed, $RECURSOR_FAIL failed"
 
-# --- dnsdist DoH (RFC 8484 POST via front :443) ---
-echo ""
-echo "dnsdist DoH (POST https://dns.${DOMAIN}/dns-query, RFC 8484)"
-DOH_OK=0
-DOH_FAIL=0
+# --- dnsdist DoH (RFC 8484 POST via Caddy :443 and direct :5300) ---
+DOH443_OK=0
+DOH443_FAIL=0
+DOH5300_OK=0
+DOH5300_FAIL=0
 DOH_BODY=$(mktemp)
 trap 'rm -f "$DOH_BODY"' EXIT
 
-if ! command -v python3 &>/dev/null; then
-  echo "  Skip  (python3 required for DoH wire-format query/parse)"
-else
-  for d in "${TEST_DOMAINS[@]}"; do
-    code=$(build_doh_query "$d" | curl -sk -X POST "$DOH_URL" \
-      -H 'Content-Type: application/dns-message' \
-      -H 'Accept: application/dns-message' \
-      --resolve "$DOH_RESOLVE" \
-      --data-binary @- \
-      --max-time 10 \
-      -o "$DOH_BODY" -w '%{http_code}' 2>/dev/null) || code="000"
-
-    if [[ "$code" == "000" ]] && [[ ! -s "$DOH_BODY" ]]; then
-      echo "  FAIL $d (curl error or empty response)"
-      ((DOH_FAIL++)) || true
-      continue
-    fi
-
-    if [[ "$code" != "200" ]]; then
-      echo "  FAIL $d (HTTP $code)"
-      ((DOH_FAIL++)) || true
-      continue
-    fi
-
-    ips=$(python3 -c "
-import struct, sys
-data = sys.stdin.buffer.read()
-if len(data) < 12:
-    sys.exit(1)
-qdcount = struct.unpack_from('!H', data, 4)[0]
-ancount = struct.unpack_from('!H', data, 6)[0]
-pos = 12
-for _ in range(qdcount):
-    while pos < len(data) and data[pos]:
-        pos += 1 + data[pos]
-    pos += 5
-out = []
-for _ in range(ancount):
-    if pos >= len(data):
-        break
-    while pos < len(data):
-        if data[pos] & 0xC0 == 0xC0:
-            pos += 2
-            break
-        if data[pos] == 0:
-            pos += 1
-            break
-        pos += 1 + data[pos]
-    if pos + 10 > len(data):
-        break
-    rtype, _, _, rdlen = struct.unpack_from('!HHIH', data, pos)
-    pos += 10
-    if rtype == 1 and rdlen == 4:
-        out.append('.'.join(str(b) for b in data[pos : pos + 4]))
-    pos += rdlen
-print(' '.join(out))
-" <"$DOH_BODY" 2>/dev/null) || ips=""
-
-    if [[ -z "$ips" ]]; then
-      echo "  FAIL $d (HTTP 200 but no A record in answer)"
-      ((DOH_FAIL++)) || true
-      continue
-    fi
-
-    if [[ "$d" == "$FILTER_DOMAIN" ]]; then
-      if [[ "$ips" == *"$FILTER_EXPECTED_IP"* ]]; then
-        echo "  OK   $d -> $ips (filtering)"
-        ((DOH_OK++)) || true
-      else
-        echo "  FAIL $d -> $ips (expected $FILTER_EXPECTED_IP for filtering)"
-        ((DOH_FAIL++)) || true
-      fi
-    else
-      echo "  OK   $d -> $ips"
-      ((DOH_OK++)) || true
-    fi
-  done
-  echo "  DoH: $DOH_OK passed, $DOH_FAIL failed"
-fi
+run_doh_functional "$DOH_URL_443" "$DOH_RESOLVE_443" \
+  "dnsdist DoH via Caddy (POST ${DOH_URL_443})" DOH443_OK DOH443_FAIL
+run_doh_functional "$DOH_URL_5300" "$DOH_RESOLVE_5300" \
+  "dnsdist DoH direct (POST ${DOH_URL_5300})" DOH5300_OK DOH5300_FAIL
 
 # --- dnsdist DoT (port 853) ---
 echo ""
@@ -342,9 +374,11 @@ if [[ "$RUN_PERF" -eq 1 ]]; then
   run_perf_benchmark "UDP :53" "$PERF_DOMAIN" dig_query_ms
 
   if command -v python3 &>/dev/null; then
-    run_perf_benchmark "DoH :443" "$PERF_DOMAIN" doh_query_ms
+    run_perf_benchmark "DoH :443" "$PERF_DOMAIN" doh_query_ms_443
+    run_perf_benchmark "DoH :5300" "$PERF_DOMAIN" doh_query_ms_5300
   else
     PERF_REPORT+=("DoH :443|$PERF_DOMAIN|0|skipped|n=0 min=- avg=- max=- last=-|-")
+    PERF_REPORT+=("DoH :5300|$PERF_DOMAIN|0|skipped|n=0 min=- avg=- max=- last=-|-")
   fi
 
   if command -v kdig &>/dev/null; then
@@ -359,7 +393,8 @@ echo ""
 echo "=== Summary ==="
 echo "Functional checks:"
 echo "  Recursor :53  $RECURSOR_OK passed, $RECURSOR_FAIL failed"
-echo "  DoH      :443 ${DOH_OK:-0} passed, ${DOH_FAIL:-0} failed"
+echo "  DoH :443  ${DOH443_OK:-0} passed, ${DOH443_FAIL:-0} failed"
+echo "  DoH :5300 ${DOH5300_OK:-0} passed, ${DOH5300_FAIL:-0} failed"
 echo "  DoT      :853 ${DOT_OK:-0} passed, ${DOT_FAIL:-0} failed"
 
 if [[ "$RUN_PERF" -eq 1 ]]; then
@@ -381,13 +416,13 @@ if [[ "$RUN_PERF" -eq 1 ]]; then
   echo "Tip: save output before/after tuning, e.g.: ./capy-test.sh | tee dns-bench-\$(date +%F-%H%M).log"
 fi
 
-TOTAL_FAIL=$((RECURSOR_FAIL + DOH_FAIL + DOT_FAIL))
+TOTAL_FAIL=$((RECURSOR_FAIL + DOH443_FAIL + DOH5300_FAIL + DOT_FAIL))
 if [[ $TOTAL_FAIL -eq 0 ]]; then
   echo ""
   echo "All DNS checks passed."
   exit 0
 else
   echo ""
-  echo "Some checks failed (recursor: $RECURSOR_FAIL, DoH: $DOH_FAIL, DoT: ${DOT_FAIL:-N/A})."
+  echo "Some checks failed (recursor: $RECURSOR_FAIL, DoH :443: $DOH443_FAIL, DoH :5300: $DOH5300_FAIL, DoT: ${DOT_FAIL:-N/A})."
   exit 1
 fi
