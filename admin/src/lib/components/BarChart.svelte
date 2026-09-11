@@ -171,7 +171,7 @@
 	}
 
 	.legend-label {
-		color: #9ca3af;
+		color: #d1d5db;
 		font-size: 14px;
 	}
 

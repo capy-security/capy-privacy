@@ -38,7 +38,7 @@
 </script>
 
 <nav
-	class="fixed top-0 right-0 left-[60px] md:left-[60px] z-[1001] h-[58px] bg-black/20 backdrop-blur-sm"
+	class="fixed top-0 right-0 left-[60px] md:left-[60px] z-[1001] h-[58px] bg-black/40 backdrop-blur-sm"
 >
 	<div class="flex h-[58px] items-center justify-between px-4 py-1">
 		<div class="flex-1">

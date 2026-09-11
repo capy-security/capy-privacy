@@ -6,4 +6,18 @@ html,
 body {
     overflow-x: hidden;
     max-width: 100vw;
+    color: #f9fafb;
+}
+
+/* Improve muted text contrast on the dark purple background */
+.text-gray-400 {
+    color: rgb(209 213 219);
+}
+
+.text-gray-300 {
+    color: rgb(229 231 235);
+}
+
+.text-gray-200 {
+    color: rgb(243 244 246);
 }

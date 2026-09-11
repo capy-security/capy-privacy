@@ -82,7 +82,7 @@
 
 <aside
 	bind:this={sidebarElement}
-	class="fixed top-0 left-0 z-[1002] flex h-screen flex-col bg-black/20 backdrop-blur-sm transition-all duration-500 ease-in-out {isExpanded
+	class="fixed top-0 left-0 z-[1002] flex h-screen flex-col bg-black/40 backdrop-blur-sm transition-all duration-500 ease-in-out {isExpanded
 		? 'md:w-[200px]'
 		: ''} w-[60px]"
 >

@@ -25,7 +25,7 @@
 
 <QueryClientProvider client={queryClient}>
 	<div
-		class="fixed inset-0 -z-10 bg-gradient-to-br from-violet-500 via-purple-500 to-blue-600"
+		class="fixed inset-0 -z-10 bg-gradient-to-br from-slate-950 via-violet-950 to-purple-950"
 	></div>
 
 	{#if showNavigation}
