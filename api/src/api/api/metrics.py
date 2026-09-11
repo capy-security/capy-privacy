@@ -14,6 +14,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _format_timestamp(value: datetime | str | None) -> str | None:
+    """Serialize aggregate timestamp values from SQLite (str or datetime)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return value.isoformat()
+
+
 router = APIRouter(
     prefix="/metrics",
     tags=["metrics"],
@@ -189,8 +198,8 @@ async def client_ips(
                 {
                     "client_ip": row.client_ip,
                     "query_count": row.query_count,
-                    "last_seen": row.last_seen.isoformat() if row.last_seen else None,
-                    "first_seen": row.first_seen.isoformat() if row.first_seen else None,
+                    "last_seen": _format_timestamp(row.last_seen),
+                    "first_seen": _format_timestamp(row.first_seen),
                     "registered": client is not None,
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,

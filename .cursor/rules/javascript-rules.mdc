@@ -1,7 +1,7 @@
 ---
 description: Frontend — admin app (SvelteKit, yarn, Orval, svelte-query)
 alwaysApply: false
-globs: "admin/**"
+globs: admin/**
 ---
 
 # Frontend rules
@@ -28,7 +28,7 @@ The admin app is built with SvelteKit (and Vite). Follow SvelteKit conventions:
 
 ## Orval (API client)
 
-Orval generates the TypeScript API client from the capy API OpenAPI spec. Config: `admin/orval.config.ts` (single backend **capy**). Generated code: `admin/src/lib/api/generated/` (endpoints by tag and `models/`). Regenerate with `yarn api` from `admin/`; do not edit generated files.
+Orval generates the TypeScript API client from the capy API OpenAPI spec. Config: `admin/orval.config.ts` (single backend **capy**). Generated code: `admin/src/lib/api/generated/` (endpoints by tag and `models/`). Regenerate with `yarn api` from `admin/`; do not edit generated files. Always pause and ask user to re-gen the files manually if needed when working on the frontend.
 
 - HTTP calls go through the custom **fetch mutator** (`admin/src/lib/api/mutator.ts`): base URL, JSON headers, API envelope (`success` / `data`), and errors aligned with TanStack Query.
 
