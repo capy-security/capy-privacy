@@ -8,6 +8,15 @@ BD_PATH_DEV = "database/database.db"
 BD_PATH_PROD = "/var/capy/database/database.db"
 
 
+def _cors_origins(*extra: str) -> list[str]:
+    domain = os.environ.get("DOMAIN", "localhost")
+    return [
+        *extra,
+        f"https://admin.{domain}",
+        f"https://api.{domain}",
+    ]
+
+
 class BaseConfig:
     """
     Configuration base, for all environments.
@@ -20,22 +29,14 @@ class BaseConfig:
 class ProductionConfig(BaseConfig):
     api_env = "production"
     api_secret = os.environ.get("API_SECRET", "")
-    origins = [
-        "*",
-        f"admin.{os.environ.get('DOMAIN', 'localhost')}",
-        f"api.{os.environ.get('DOMAIN', 'localhost')}",
-    ]
+    origins = _cors_origins()
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_PROD)}"
 
 
 class DevelopmentConfig(BaseConfig):
     api_env = "development"
     api_secret = "capybara"
-    origins = [
-        "http://localhost:5173",
-        f"admin.{os.environ.get('DOMAIN', 'localhost')}",
-        f"api.{os.environ.get('DOMAIN', 'localhost')}",
-    ]
+    origins = _cors_origins("http://localhost:5173")
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASEDIR, BD_PATH_DEV)}"
 
 
