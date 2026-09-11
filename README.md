@@ -112,7 +112,6 @@ After logging in, the sidebar gives access to:
 capy-privacy/
 ├── docker-compose.yaml   # API, core, front (Docker Compose)
 ├── init.sh               # First-time setup: .env, host TLS
-├── caddy-conf.d/         # Example *.caddy templates (install to /etc/caddy/conf.d/ on host)
 ├── api/                  # FastAPI app, SQLite, domain/client/blocklist logic
 ├── core/                 # dnsdist + PowerDNS Recursor config
 ├── front/                # Caddy config, static admin SPA, blocked page
