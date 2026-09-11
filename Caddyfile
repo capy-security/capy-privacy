@@ -61,7 +61,7 @@ https://{$ADMIN_DOMAIN} {
 # -----------------------------------------------------------------------------
 # DNS - DoH (always HTTPS — required by protocol)
 # -----------------------------------------------------------------------------
-{$DNS_DOMAIN} {
+https://{$DNS_DOMAIN} {
 	tls /etc/letsencrypt/live/{$DNS_DOMAIN}/fullchain.pem /etc/letsencrypt/live/{$DNS_DOMAIN}/privkey.pem
 
 	header {
@@ -78,6 +78,9 @@ https://{$ADMIN_DOMAIN} {
 	handle /dns-query {
 		reverse_proxy h2c://{$CORE_HOST:host.docker.internal}:5301 {
 			transport http {
+				versions h2c 2
+				keepalive 2m
+				keepalive_idle_conns 32
 				read_timeout 10s
 				write_timeout 10s
 			}
