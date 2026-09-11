@@ -1,3 +1,4 @@
+from api.models.blocked_ip import BlockedIPDB
 from api.models.category import CategoryDB
 from api.models.client import ClientDB
 from api.models.domain import DomainDB
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 tables = {
+    "blocked_ip": BlockedIPDB,
     "category": CategoryDB,
     "client": ClientDB,
     "domain": DomainDB,
@@ -31,6 +33,7 @@ tables = {
 
 
 class Tables(str, Enum):
+    blocked_ip = "blocked_ip"
     category = "category"
     client = "client"
     domain = "domain"
@@ -74,6 +77,7 @@ def get_database():
         try:
             database.connect()
             # Ensure tables exist
+            BlockedIPDB._meta.database = database
             CategoryDB._meta.database = database
             DomainDB._meta.database = database
             ClientDB._meta.database = database
@@ -86,6 +90,7 @@ def get_database():
 
             database.create_tables(
                 [
+                    BlockedIPDB,
                     CategoryDB,
                     DomainDB,
                     ClientDB,
@@ -112,6 +117,7 @@ def get_database_fastapi():
     if database.is_closed():
         database.connect()
         # Ensure tables exist
+        BlockedIPDB._meta.database = database
         CategoryDB._meta.database = database
         DomainDB._meta.database = database
         ClientDB._meta.database = database
@@ -123,6 +129,7 @@ def get_database_fastapi():
         AssociationCategories._meta.database = database
         database.create_tables(
             [
+                BlockedIPDB,
                 CategoryDB,
                 DomainDB,
                 ClientDB,
