@@ -1,7 +1,8 @@
 # Capy Privacy — base reverse proxy (api, admin, dns, block page)
+# Baked into the front image (front/system/etc/caddy/Caddyfile).
 # Domains from container env: DOMAIN, API_DOMAIN, ADMIN_DOMAIN, DNS_DOMAIN, IP_ADDRESS, CORE_HOST
-# TLS under /etc/letsencrypt/live/<name>/ (bind-mount ./ssl in compose)
-# Custom vhosts: drop *.caddy files in /etc/caddy/conf.d/ on the host
+# TLS under /etc/letsencrypt/live/<name>/ (compose: ./deploy/ssl)
+# Custom vhosts: drop *.caddy files in ./deploy/caddy/conf.d/
 
 # -----------------------------------------------------------------------------
 # API - FastAPI backend
@@ -121,6 +122,6 @@ https://{$IP_ADDRESS} {
 }
 
 # -----------------------------------------------------------------------------
-# User custom vhosts — host /etc/caddy/conf.d/*.caddy (mounted as container conf.d/)
+# User custom vhosts — ./deploy/caddy/conf.d/*.caddy (mounted as /etc/caddy/conf.d/)
 # -----------------------------------------------------------------------------
 import conf.d/*.caddy

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Capy Privacy — first-time setup: TLS, .env
-# Usage: ./init.sh   (from repo root; stores cert material in ./ssl)
+# Capy Privacy — first-time setup: TLS, .env, deploy/ layout
+# Usage: ./capy-init.sh   (from repo root; stores cert material in ./deploy/ssl)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 ENV_FILE="${ROOT}/.env"
-SSL_ROOT="${ROOT}/ssl"
+DEPLOY_ROOT="${ROOT}/deploy"
+SSL_ROOT="${DEPLOY_ROOT}/ssl"
 SSL_WORK_DIR="${SSL_ROOT}/work"
 SSL_LOGS_DIR="${SSL_ROOT}/logs"
 REUSE_EXISTING_SETUP=0
@@ -17,7 +18,7 @@ EXISTING_API_SECRET=""
 CLI_DOMAIN=""
 CLI_IP_ADDRESS=""
 
-# Install real cert + key files under ./ssl/live/<name>/ for compose bind mounts.
+# Install real cert + key files under ./deploy/ssl/live/<name>/ for compose bind mounts.
 install_cert() {
 	local name="$1" cert="$2" key="$3"
 	mkdir -p "${SSL_ROOT}/live/${name}"
@@ -27,7 +28,7 @@ install_cert() {
 	chmod 600 "${SSL_ROOT}/live/${name}/privkey.pem"
 }
 
-# Self-signed TLS for bare IP (block page HTTPS). Installs under ./ssl/live/<ip>/
+# Self-signed TLS for bare IP (block page HTTPS). Installs under ./deploy/ssl/live/<ip>/
 gen_self_signed_ip() {
 	local ip="$1"
 	local d c k
@@ -80,9 +81,10 @@ read_existing_env() {
 
 print_usage() {
 	cat <<'EOF'
-Usage: ./init.sh [--domain <domain>] [--ip <ip>] [--help]
+Usage: ./capy-init.sh [--domain <domain>] [--ip <ip>] [--help]
 
-Creates .env and TLS material under ./ssl/live (for compose bind mounts).
+Creates .env and TLS material under ./deploy/ssl/live (for compose bind mounts).
+Ensures ./deploy/{database,caddy/conf.d,www,dnsdist,powerdns} exist.
 EOF
 }
 
@@ -193,9 +195,40 @@ else
 	gen_self_signed_ip "${IP_ADDRESS}"
 fi
 
-# Host custom vhosts dir (compose: /etc/caddy/conf.d → container /etc/caddy/conf.d)
-if [[ ! -d /etc/caddy/conf.d ]]; then
-	mkdir -p /etc/caddy/conf.d 2>/dev/null || sudo mkdir -p /etc/caddy/conf.d
+# Per-deploy directories (compose bind mounts)
+mkdir -p "${SSL_ROOT}/live" "${SSL_WORK_DIR}" "${SSL_LOGS_DIR}"
+mkdir -p "${DEPLOY_ROOT}/database" "${DEPLOY_ROOT}/caddy/conf.d" "${DEPLOY_ROOT}/www"
+mkdir -p "${DEPLOY_ROOT}/dnsdist" "${DEPLOY_ROOT}/powerdns"
+
+if [[ ! -f "${DEPLOY_ROOT}/dnsdist/allow_from.txt" ]]; then
+	cat >"${DEPLOY_ROOT}/dnsdist/allow_from.txt" <<'ACL'
+# Generated or edited by the app;
+# No restart needed to reload
+::/0
+0.0.0.0/0
+127.0.0.0/8
+10.0.0.0/8
+192.168.0.0/16
+172.16.0.0/12
+ACL
+fi
+
+if [[ ! -f "${DEPLOY_ROOT}/powerdns/allow_from.yml" ]]; then
+	cat >"${DEPLOY_ROOT}/powerdns/allow_from.yml" <<'ACL'
+# Generated or edited by the app;
+# reload with: rec_control reload-acls
+- ::/0
+- 0.0.0.0/0
+- 127.0.0.0/8
+- 10.0.0.0/8
+- 192.168.0.0/16
+- 172.16.0.0/12
+# Add your public IP(s) here if you need to allow external access (e.g. 203.0.113.10)
+ACL
+fi
+
+if [[ ! -f "${DEPLOY_ROOT}/caddy/conf.d/.gitkeep.caddy" ]]; then
+	printf '%s\n' '# Add custom Caddy site blocks here (*.caddy).' >"${DEPLOY_ROOT}/caddy/conf.d/.gitkeep.caddy"
 fi
 
 API_SECRET="${EXISTING_API_SECRET:-}"
@@ -214,7 +247,9 @@ echo "Done."
 echo "  DOMAIN=${DOMAIN}  IP_ADDRESS=${IP_ADDRESS}"
 echo "  TLS material: ${SSL_ROOT}/live/<hostname>/ (mounted into capy-front and capy-core)"
 echo "  Wrote ${ROOT}/.env"
-echo "  Custom Caddy vhosts: /etc/caddy/conf.d/*.caddy"
+echo "  Custom Caddy vhosts: ${DEPLOY_ROOT}/caddy/conf.d/*.caddy"
+echo "  DNS ACLs: ${DEPLOY_ROOT}/dnsdist/allow_from.txt , ${DEPLOY_ROOT}/powerdns/allow_from.yml"
 echo ""
 echo "Next:  sudo docker compose up -d --build"
 echo "Note: Rebuild capy-front after DOMAIN changes — VITE_API_URL is http://api.<DOMAIN>/ from compose (set https in compose if you need TLS for the API in the browser)."
+echo "Logs:  sudo docker compose logs -f capy-front"

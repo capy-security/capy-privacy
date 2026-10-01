@@ -1,5 +1,6 @@
 # Base domain (e.g. capysecurity.com). API/DNS/Admin are always api.$DOMAIN, dns.$DOMAIN, admin.$DOMAIN.
 # Set DOMAIN (and optionally IP_ADDRESS) in .env.
+# Per-deploy files live under ./deploy/ (ssl, database, ACLs, custom Caddy vhosts, www).
 # Docker Compose on Debian — run: sudo docker compose up -d --build
 services:
   capy-api:
@@ -14,7 +15,7 @@ services:
       - "host.containers.internal:host-gateway"
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./resources/database/:/var/capy/database/:Z
+      - ./deploy/database/:/var/capy/database/:Z
     ports:
       - "127.0.0.1:8080:8080/tcp"
     expose:
@@ -44,9 +45,10 @@ services:
     depends_on:
       - capy-api
     volumes:
-      - ./resources/database/:/var/capy/database/:Z
-      - ./ssl/:/etc/letsencrypt/:ro,Z
-      - ./core/system/etc/dnsdist/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro,Z
+      - ./deploy/database/:/var/capy/database/:Z
+      - ./deploy/ssl/:/etc/letsencrypt/:ro,Z
+      - ./deploy/dnsdist/allow_from.txt:/etc/dnsdist/allow_from.txt:ro,Z
+      - ./deploy/powerdns/allow_from.yml:/etc/powerdns/allow_from.yml:ro,Z
     ulimits:
       nofile:
         soft: 65536
@@ -76,11 +78,9 @@ services:
       - "host.containers.internal:host-gateway"
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
-      - ./ssl/:/etc/letsencrypt/:ro,Z
-      - /etc/caddy/conf.d:/etc/caddy/conf.d:ro,Z  # host custom vhosts (*.caddy)
-      - /var/www/:/var/www/:ro,Z
-      - /var/log/caddy/:/var/log/caddy/:Z
+      - ./deploy/ssl/:/etc/letsencrypt/:ro,Z
+      - ./deploy/caddy/conf.d:/etc/caddy/conf.d:ro,Z
+      - ./deploy/www/:/var/www/:ro,Z
     ports:
       - '80:80/tcp'
       - '443:443/tcp'

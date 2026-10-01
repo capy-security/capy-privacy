@@ -62,7 +62,3 @@ temp/
 **/dist/
 **/build/
 **/coverage/
-
-# Keep root-level files that are required by capy-front runtime mounts
-!Caddyfile
-!Caddyfile.example

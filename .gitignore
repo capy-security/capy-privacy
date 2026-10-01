@@ -76,7 +76,15 @@ yarn-error.log*
 openapi.json
 
 # -----------------------------------------------------------------------------
-# Production DB (directory tracked via .gitkeep for volume mount)
+# Production deploy data (directory tracked via .gitkeep / defaults)
 # -----------------------------------------------------------------------------
-resources/database/*
-!resources/database/.gitkeep
+deploy/database/*
+!deploy/database/.gitkeep
+deploy/ssl/**
+!deploy/ssl/.gitkeep
+deploy/www/*
+!deploy/www/.gitkeep
+# keep default ACL templates and conf.d placeholder tracked
+!deploy/dnsdist/allow_from.txt
+!deploy/powerdns/allow_from.yml
+!deploy/caddy/conf.d/.gitkeep.caddy
