@@ -56,25 +56,24 @@ git clone https://github.com/capy-security/capy-privacy.git
 
 2. **First-time setup**
 
-Launch `./init.sh` from the repo root. It creates env variables and TLS material on the host.
+Host CLI (stdlib Python): `./capy`
 
 ```bash
 cd capy-privacy
-./init.sh
+./capy setup --domain example.com --ip 203.0.113.10
+./capy ssl --email you@example.com   # certbot; ports 80/443 must be free
+./capy up                            # docker compose up -d --build
+./capy test
 ```
 
-- For **localhost**, you need `mkcert` (locally trusted dev certs).
-- For a **real domain**, you need `certbot` and ports 80/443 free for ACME.
-- The script writes `.env` (including `API_SECRET`) and material under host `/etc/letsencrypt/live/`. Both `capy-front` and `capy-core` mount `/etc/letsencrypt` read-only; dnsdist builds TLS paths from `DOMAIN` (see `core/system/etc/dnsdist/dnsdist.conf`).
-- /!\ If you install capy-security in a public internet server:
-  - you need to add your home IP address to `./capy-privacy/core/system/etc/powerdns/allow_from.yml`
+- **Production (real domain):** `./capy setup` then `./capy ssl` (certbot → `./deploy/ssl`).
+- **Localhost / mkcert:** keep using legacy `./capy-init.sh` for now.
+- /!\ On a public server, tighten `./deploy/powerdns/allow_from.yml` (and `./deploy/dnsdist/allow_from.txt`).
 
 3. **Build and run**
 
-From the repo root run Docker Compose (use `sudo` on Debian for privileged ports):
-
 ```bash
-sudo docker compose up -d --build
+./capy up          # or: sudo ./capy up   if Docker needs root for ports 53/80/443/853
 ```
 
 Services bind privileged ports (`53`, `80`, `443`, `853`); `sudo` is required unless your user is in the `docker` group and you accept that trade-off.
@@ -111,14 +110,17 @@ After logging in, the sidebar gives access to:
 ```
 capy-privacy/
 ├── docker-compose.yaml   # API, core, front (Docker Compose)
-├── init.sh               # First-time setup: .env, host TLS
-├── api/                  # FastAPI app, SQLite, domain/client/blocklist logic
-├── core/                 # dnsdist + PowerDNS Recursor config
-├── front/                # Caddy config, static admin SPA, blocked page
+├── capy                  # Host CLI: setup | ssl | test | build | up | down | restart
+├── capy-init.sh          # Legacy local TLS (mkcert / openssl)
+├── capy-test.sh          # Legacy bash tests (prefer ./capy test)
+├── api/                  # FastAPI app (baked into image)
+├── core/                 # dnsdist + PowerDNS config (baked into image)
+├── front/                # Caddyfile + blocked page (baked into image)
 ├── admin/                # SvelteKit source for the admin UI (built into front image)
-└── resources/            # database (SQLite), ssl/dns for core (created by init)
+└── deploy/               # Per-install data (ssl, database, ACLs, custom Caddy, www)
 ```
 
+Caddy logs go to stdout/stderr — use `sudo docker compose logs -f capy-front`.
 ## License
 
 This project is licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0). See [LICENSE](LICENSE).
