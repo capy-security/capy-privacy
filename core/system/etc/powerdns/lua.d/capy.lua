@@ -53,7 +53,17 @@ end
 con = connect_database()
 
 
+-- dnsdist → recursor is 127.0.0.1:5353 (health checks + Proxy Protocol hop).
+-- Loopback is not an external client; allowlist applies to real remoteaddrs only.
+local function is_loopback_ip(client_ip)
+    return client_ip == "127.0.0.1" or client_ip == "::1"
+end
+
 local function is_client_ip_allowed(client_ip)
+    if is_loopback_ip(client_ip) then
+        return true
+    end
+
     local cache_entry = ip_allow_cache[client_ip]
     if cache_entry and cache_entry.expires_at > os.time() then
         return cache_entry.allowed
