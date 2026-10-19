@@ -22,6 +22,8 @@
 		XMark,
 	} from 'svelte-heros-v2';
 
+	type SortField = 'client_ip' | 'allowed' | 'query_count';
+
 	const queryClient = useQueryClient();
 	let user = $derived($authorizationStore);
 
@@ -30,17 +32,30 @@
 	let actionError = $state<string | null>(null);
 	let actionIp = $state<string | null>(null);
 
+	let filterIpInput = $state('');
+	let filterIp = $state('');
+	let sortField = $state<SortField>('query_count');
+	let sortDesc = $state(true);
+	let filterTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	let isRegisterModalOpen = $state(false);
 	let registerIp = $state('');
 	let registerName = $state('');
 	let registerDescription = $state('');
 	let registerError = $state<string | null>(null);
 
+	let orderBy = $derived(`${sortDesc ? '-' : ''}${sortField}`);
+
 	const clientIpsQuery = createClientIpsMetricsClientIpsGet<{
 		clients: ClientIpEntry[];
 		totalItems: number;
 	}>(
-		() => ({ page_number: currentPage, items_per_page: itemsPerPage }),
+		() => ({
+			page_number: currentPage,
+			items_per_page: itemsPerPage,
+			order_by: orderBy,
+			...(filterIp.trim() ? { filter_ip: filterIp.trim() } : {}),
+		}),
 		() => ({
 			request: { headers: { Authorization: `Bearer ${user.token}` } },
 			query: {
@@ -182,6 +197,36 @@
 	function refreshClientIps() {
 		invalidateClientIps();
 	}
+
+	function onFilterIpInput() {
+		if (filterTimeout) clearTimeout(filterTimeout);
+		filterTimeout = setTimeout(() => {
+			filterIp = filterIpInput;
+			currentPage = 1;
+		}, 300);
+	}
+
+	function clearIpFilter() {
+		if (filterTimeout) clearTimeout(filterTimeout);
+		filterIpInput = '';
+		filterIp = '';
+		currentPage = 1;
+	}
+
+	function toggleSort(field: SortField) {
+		if (sortField === field) {
+			sortDesc = !sortDesc;
+		} else {
+			sortField = field;
+			sortDesc = field === 'query_count' || field === 'allowed';
+		}
+		currentPage = 1;
+	}
+
+	function sortIndicator(field: SortField): string {
+		if (sortField !== field) return '';
+		return sortDesc ? ' ↓' : ' ↑';
+	}
 </script>
 
 <div>
@@ -202,6 +247,32 @@
 		</button>
 	</div>
 
+	<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+		<div class="min-w-0 flex-1">
+			<label for="filter-ip" class="mb-1 block text-sm font-medium text-gray-200">Filter by IP</label>
+			<div class="relative">
+				<input
+					id="filter-ip"
+					type="text"
+					bind:value={filterIpInput}
+					oninput={onFilterIpInput}
+					placeholder="e.g. 82.65 or 2001:41d0"
+					class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 pr-10 text-white placeholder-gray-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+				/>
+				{#if filterIpInput}
+					<button
+						type="button"
+						onclick={clearIpFilter}
+						class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+						aria-label="Clear IP filter"
+					>
+						<XMark class="h-4 w-4" />
+					</button>
+				{/if}
+			</div>
+		</div>
+	</div>
+
 	{#if error}
 		<div class="mb-6 rounded-lg border border-red-500/30 bg-red-500/20 p-4 backdrop-blur-sm">
 			<p class="text-red-200">{error}</p>
@@ -220,7 +291,9 @@
 		</div>
 	{:else if clients.length === 0}
 		<div class="rounded-lg border border-white/20 bg-white/10 p-8 text-center backdrop-blur-sm">
-			<p class="text-gray-300">No client IPs found in metrics yet.</p>
+			<p class="text-gray-300">
+				{filterIp.trim() ? 'No client IPs match this filter.' : 'No client IPs found in metrics yet.'}
+			</p>
 		</div>
 	{:else}
 		<div class="overflow-hidden rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm">
@@ -229,13 +302,31 @@
 					<thead class="bg-white/5">
 						<tr>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
-								IP
+								<button
+									type="button"
+									onclick={() => toggleSort('client_ip')}
+									class="inline-flex items-center gap-1 hover:text-white"
+								>
+									IP{sortIndicator('client_ip')}
+								</button>
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
-								Status
+								<button
+									type="button"
+									onclick={() => toggleSort('allowed')}
+									class="inline-flex items-center gap-1 hover:text-white"
+								>
+									Status{sortIndicator('allowed')}
+								</button>
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
-								Queries
+								<button
+									type="button"
+									onclick={() => toggleSort('query_count')}
+									class="inline-flex items-center gap-1 hover:text-white"
+								>
+									Queries{sortIndicator('query_count')}
+								</button>
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
 								Last seen

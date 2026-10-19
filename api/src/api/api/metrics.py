@@ -162,6 +162,20 @@ async def client_ips(
     authorization: Annotated[str, Depends(check_authorization)],
     page_number: Annotated[int, Query(ge=1)] = 1,
     items_per_page: Annotated[int, Query(ge=1, le=1000)] = 50,
+    order_by: Annotated[
+        str,
+        Query(
+            description=(
+                "Sort field, optional leading '-' for descending. "
+                "One of: client_ip, query_count, allowed, last_seen"
+            ),
+            pattern="^-?(client_ip|query_count|allowed|last_seen)$",
+        ),
+    ] = "-last_seen",
+    filter_ip: Annotated[
+        str | None,
+        Query(description="Substring filter on client IP (case-insensitive)"),
+    ] = None,
 ) -> ApiResponse:
     """
     List distinct client IPs seen in DNS metrics.
@@ -178,7 +192,7 @@ async def client_ips(
         }
         clients_by_ip = {row.ip: row for row in ClientDB.select()}
 
-        base_query = (
+        rows = (
             MetricDB.select(
                 MetricDB.client_ip,
                 fn.COUNT(MetricDB.id).alias("query_count"),
@@ -188,13 +202,7 @@ async def client_ips(
             .group_by(MetricDB.client_ip)
         )
 
-        total = base_query.count()
-        rows = (
-            base_query.order_by(fn.MAX(MetricDB.timestamp).desc())
-            .paginate(page_number, items_per_page)
-        )
-
-        results = []
+        results: list[dict] = []
         for row in rows:
             client = clients_by_ip.get(row.client_ip)
             is_allowed = row.client_ip in allowed_ips
@@ -232,11 +240,40 @@ async def client_ips(
                 }
             )
 
+        ip_filter = (filter_ip or "").strip().lower()
+        if ip_filter:
+            results = [
+                item
+                for item in results
+                if ip_filter in str(item["client_ip"]).lower()
+            ]
+
+        descending = order_by.startswith("-")
+        sort_field = order_by[1:] if descending else order_by
+
+        def sort_key(item: dict):
+            if sort_field == "client_ip":
+                return str(item["client_ip"] or "")
+            if sort_field == "query_count":
+                return int(item["query_count"] or 0)
+            if sort_field == "allowed":
+                return 1 if item["allowed"] else 0
+            # last_seen (None sorts last when ascending, first when descending)
+            value = item.get("last_seen") or ""
+            return value
+
+        results.sort(key=sort_key, reverse=descending)
+
+        total_items = len(results)
+        start = (page_number - 1) * items_per_page
+        end = start + items_per_page
+        page_results = results[start:end]
+
         response.success = True
-        response.message = f"Retrieved {len(results)} client IP(s)"
+        response.message = f"Retrieved {len(page_results)} client IP(s)"
         response.data = {
-            "clients": results,
-            "total_items": total + len(allowed_ips - seen_ips),
+            "clients": page_results,
+            "total_items": total_items,
             "page_number": page_number,
             "items_per_page": items_per_page,
         }

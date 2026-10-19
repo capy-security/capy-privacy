@@ -16,4 +16,13 @@ page_number?: number;
  * @maximum 1000
  */
 items_per_page?: number;
+/**
+ * Sort field, optional leading '-' for descending. One of: client_ip, query_count, allowed, last_seen
+ * @pattern ^-?(client_ip|query_count|allowed|last_seen)$
+ */
+order_by?: string;
+/**
+ * Substring filter on client IP (case-insensitive)
+ */
+filter_ip?: string | null;
 };
