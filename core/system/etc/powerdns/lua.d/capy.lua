@@ -4,8 +4,8 @@ env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
 local decision_cache = {}
 local decision_cache_ttl_seconds = 60
-local ip_block_cache = {}
-local ip_block_cache_ttl_seconds = 60
+local ip_allow_cache = {}
+local ip_allow_cache_ttl_seconds = 60
 
 local function cache_key(client_ip, domain)
     return client_ip .. "|" .. domain
@@ -53,40 +53,41 @@ end
 con = connect_database()
 
 
-local function is_client_ip_blocked(client_ip)
-    local cache_entry = ip_block_cache[client_ip]
+local function is_client_ip_allowed(client_ip)
+    local cache_entry = ip_allow_cache[client_ip]
     if cache_entry and cache_entry.expires_at > os.time() then
-        return cache_entry.blocked
+        return cache_entry.allowed
     end
 
     if not con then
         con = connect_database()
         if not con then
+            -- Fail closed: deny when DB is unavailable
             return false
         end
     end
 
     local escaped_client_ip = con:escape(client_ip)
     local request = string.format(
-        "SELECT 1 FROM blocked_ip WHERE ip = '%s' LIMIT 1",
+        "SELECT 1 FROM allowed_ip WHERE ip = '%s' LIMIT 1",
         escaped_client_ip
     )
     local result, error = exec_sql(request)
-    local blocked = (error == "" and next(result) ~= nil)
+    local allowed = (error == "" and next(result) ~= nil)
 
-    ip_block_cache[client_ip] = {
-        blocked = blocked,
-        expires_at = os.time() + ip_block_cache_ttl_seconds,
+    ip_allow_cache[client_ip] = {
+        allowed = allowed,
+        expires_at = os.time() + ip_allow_cache_ttl_seconds,
     }
-    return blocked
+    return allowed
 end
 
 
 function preresolve(dq)
     local client_ip = dq.remoteaddr:toString()
 
-    if is_client_ip_blocked(client_ip) then
-        pdnslog(string.format("IP BLOCKED: %s", client_ip), pdns.loglevels.Info)
+    if not is_client_ip_allowed(client_ip) then
+        pdnslog(string.format("IP DENIED (not in allowlist): %s", client_ip), pdns.loglevels.Info)
         dq.rcode = pdns.REFUSED
         return true
     end
