@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated
 from api.database import get_database_fastapi
-from api.models.blocked_ip import BlockedIPDB
+from api.models.allowed_ip import AllowedIPDB
 from api.models.client import ClientDB
 from api.models.metric import MetricDB
 from api.models.api import ApiResponse
@@ -167,12 +167,15 @@ async def client_ips(
     List distinct client IPs seen in DNS metrics.
 
     Aggregates query counts and first/last seen timestamps, and marks each IP
-    as registered (client table) or blocked (blocked_ip table).
+    as registered (client table) or allowed (allowed_ip allowlist).
     """
     response = ApiResponse(success=False, message="", data={})
 
     try:
-        blocked_ips = {row.ip for row in BlockedIPDB.select(BlockedIPDB.ip)}
+        allowed_ips = {row.ip for row in AllowedIPDB.select(AllowedIPDB.ip)}
+        allowed_reasons = {
+            row.ip: row.reason for row in AllowedIPDB.select(AllowedIPDB.ip, AllowedIPDB.reason)
+        }
         clients_by_ip = {row.ip: row for row in ClientDB.select()}
 
         base_query = (
@@ -194,6 +197,7 @@ async def client_ips(
         results = []
         for row in rows:
             client = clients_by_ip.get(row.client_ip)
+            is_allowed = row.client_ip in allowed_ips
             results.append(
                 {
                     "client_ip": row.client_ip,
@@ -203,28 +207,28 @@ async def client_ips(
                     "registered": client is not None,
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,
-                    "blocked": row.client_ip in blocked_ips,
+                    "allowed": is_allowed,
+                    "allow_reason": allowed_reasons.get(row.client_ip, "") if is_allowed else "",
                 }
             )
 
-        # Include blocked IPs that have no metrics yet
+        # Include allowed IPs that have no metrics yet
         seen_ips = {item["client_ip"] for item in results}
-        for blocked_ip in blocked_ips:
-            if blocked_ip in seen_ips:
+        for allowed_ip in allowed_ips:
+            if allowed_ip in seen_ips:
                 continue
-            client = clients_by_ip.get(blocked_ip)
-            blocked_row = BlockedIPDB.get_or_none(BlockedIPDB.ip == blocked_ip)
+            client = clients_by_ip.get(allowed_ip)
             results.append(
                 {
-                    "client_ip": blocked_ip,
+                    "client_ip": allowed_ip,
                     "query_count": 0,
                     "last_seen": None,
                     "first_seen": None,
                     "registered": client is not None,
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,
-                    "blocked": True,
-                    "block_reason": blocked_row.reason if blocked_row else "",
+                    "allowed": True,
+                    "allow_reason": allowed_reasons.get(allowed_ip, ""),
                 }
             )
 
@@ -232,7 +236,7 @@ async def client_ips(
         response.message = f"Retrieved {len(results)} client IP(s)"
         response.data = {
             "clients": results,
-            "total_items": total + len(blocked_ips - seen_ips),
+            "total_items": total + len(allowed_ips - seen_ips),
             "page_number": page_number,
             "items_per_page": items_per_page,
         }

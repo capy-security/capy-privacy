@@ -1,4 +1,4 @@
-from api.models.blocked_ip import BlockedIPDB
+from api.models.allowed_ip import AllowedIPDB
 from api.models.category import CategoryDB
 from api.models.client import ClientDB
 from api.models.domain import DomainDB
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 tables = {
-    "blocked_ip": BlockedIPDB,
+    "allowed_ip": AllowedIPDB,
     "category": CategoryDB,
     "client": ClientDB,
     "domain": DomainDB,
@@ -33,7 +33,7 @@ tables = {
 
 
 class Tables(str, Enum):
-    blocked_ip = "blocked_ip"
+    allowed_ip = "allowed_ip"
     category = "category"
     client = "client"
     domain = "domain"
@@ -68,6 +68,53 @@ def get_database_path():
 database = SqliteDatabase(get_database_path(), pragmas={"journal_mode": "wal"})
 
 
+def _bind_models():
+    AllowedIPDB._meta.database = database
+    CategoryDB._meta.database = database
+    DomainDB._meta.database = database
+    ClientDB._meta.database = database
+    GroupDB._meta.database = database
+    MetricDB._meta.database = database
+    StatisticDB._meta.database = database
+    UserDB._meta.database = database
+    AssociationClients._meta.database = database
+    AssociationCategories._meta.database = database
+
+
+def _seed_bootstrap_allowed_ip():
+    """If the allowlist is empty, seed IP_ADDRESS so DNS is not locked out after upgrade."""
+    ip_address = (os.environ.get("IP_ADDRESS") or "").strip()
+    if not ip_address:
+        return
+    try:
+        if AllowedIPDB.select().exists():
+            return
+        AllowedIPDB.create(ip=ip_address, reason="Bootstrap allowlist entry")
+        logger.info(f"Seeded empty allowlist with IP_ADDRESS={ip_address}")
+    except Exception as e:
+        logger.warning(f"Could not seed bootstrap allowed IP: {e}")
+
+
+def _ensure_tables():
+    _bind_models()
+    database.create_tables(
+        [
+            AllowedIPDB,
+            CategoryDB,
+            DomainDB,
+            ClientDB,
+            GroupDB,
+            MetricDB,
+            StatisticDB,
+            UserDB,
+            AssociationClients,
+            AssociationCategories,
+        ],
+        safe=True,
+    )
+    _seed_bootstrap_allowed_ip()
+
+
 def get_database():
     """
     Provides a connected db; lazy connect if needed.
@@ -76,33 +123,7 @@ def get_database():
         logger.info("Connecting to database")
         try:
             database.connect()
-            # Ensure tables exist
-            BlockedIPDB._meta.database = database
-            CategoryDB._meta.database = database
-            DomainDB._meta.database = database
-            ClientDB._meta.database = database
-            GroupDB._meta.database = database
-            MetricDB._meta.database = database
-            StatisticDB._meta.database = database
-            UserDB._meta.database = database
-            AssociationClients._meta.database = database
-            AssociationCategories._meta.database = database
-
-            database.create_tables(
-                [
-                    BlockedIPDB,
-                    CategoryDB,
-                    DomainDB,
-                    ClientDB,
-                    GroupDB,
-                    MetricDB,
-                    StatisticDB,
-                    UserDB,
-                    AssociationClients,
-                    AssociationCategories,
-                ],
-                safe=True,
-            )
+            _ensure_tables()
             return True
         except OperationalError:
             logger.error("Database unavailable")
@@ -116,32 +137,7 @@ def get_database_fastapi():
     """
     if database.is_closed():
         database.connect()
-        # Ensure tables exist
-        BlockedIPDB._meta.database = database
-        CategoryDB._meta.database = database
-        DomainDB._meta.database = database
-        ClientDB._meta.database = database
-        GroupDB._meta.database = database
-        MetricDB._meta.database = database
-        StatisticDB._meta.database = database
-        UserDB._meta.database = database
-        AssociationClients._meta.database = database
-        AssociationCategories._meta.database = database
-        database.create_tables(
-            [
-                BlockedIPDB,
-                CategoryDB,
-                DomainDB,
-                ClientDB,
-                GroupDB,
-                MetricDB,
-                StatisticDB,
-                UserDB,
-                AssociationClients,
-                AssociationCategories,
-            ],
-            safe=True,
-        )
+        _ensure_tables()
     return database
 
 
@@ -162,6 +158,7 @@ def populate_database():
 
     Reads DOMAIN and IP_ADDRESS from environment, then:
     - Creates a client with IP_ADDRESS
+    - Allows IP_ADDRESS in the DNS allowlist
     - Creates categories: ads, adult, violence, gaming
     - Creates one active domain test.{DOMAIN} (to verify filtering)
     - Creates group "Admin" linked to all categories and the new client
@@ -180,6 +177,16 @@ def populate_database():
             defaults={"name": "Admin client", "description": ""},
         )
         logger.info(f"Client: {client.name} ({client.ip})")
+
+        # Allow server IP so DNS works under default-deny allowlist
+        allowed, created = AllowedIPDB.get_or_create(
+            ip=ip_address,
+            defaults={"reason": "Bootstrap allowlist entry"},
+        )
+        if created:
+            logger.info(f"Allowed IP: {allowed.ip}")
+        else:
+            logger.info(f"Allowed IP already present: {allowed.ip}")
 
         # Categories with descriptions
         categories_data = [

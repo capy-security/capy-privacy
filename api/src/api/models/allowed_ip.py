@@ -8,18 +8,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 LOGGER = logging.getLogger(__name__)
 
 
-class BlockedIP(BaseModel):
+class AllowedIP(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
-                {"ip": "203.0.113.99", "reason": "Unknown scanner"},
+                {"ip": "203.0.113.10", "reason": "Home LTE"},
             ],
         }
     )
-    id: int | None = Field(default=None, title="Blocked IP ID")
-    ip: str = Field(min_length=1, max_length=45, title="Blocked IP address")
+    id: int | None = Field(default=None, title="Allowed IP ID")
+    ip: str = Field(min_length=1, max_length=45, title="Allowed IP address")
     reason: str = Field(
-        default="", min_length=0, max_length=128, title="Block reason"
+        default="", min_length=0, max_length=128, title="Allow reason"
     )
 
     @field_validator("ip")
@@ -37,27 +37,27 @@ class BlockedIP(BaseModel):
         return v
 
 
-class BlockedIPDB(Model):
+class AllowedIPDB(Model):
     id = AutoField(primary_key=True)
     ip = CharField(max_length=45, unique=True)
     reason = CharField(max_length=128, default="")
 
     class Meta:
-        table_name = "blocked_ip"
+        table_name = "allowed_ip"
 
     def __repr__(self):
-        return f"<blocked_ip (id={self.id}, ip={self.ip})>"
+        return f"<allowed_ip (id={self.id}, ip={self.ip})>"
 
     @classmethod
-    def from_pydantic(cls, blocked_ip: BlockedIP):
+    def from_pydantic(cls, allowed_ip: AllowedIP):
         return cls(
-            id=blocked_ip.id,
-            ip=blocked_ip.ip,
-            reason=blocked_ip.reason,
+            id=allowed_ip.id,
+            ip=allowed_ip.ip,
+            reason=allowed_ip.reason,
         )
 
     def to_pydantic(self):
-        return BlockedIP(
+        return AllowedIP(
             id=self.id,
             ip=self.ip,
             reason=self.reason,

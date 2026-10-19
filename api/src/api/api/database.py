@@ -3,7 +3,7 @@ from typing import Annotated
 from peewee import SqliteDatabase, Model, BooleanField, IntegerField
 from api.database import get_database_fastapi
 from api.models.api import ApiResponse
-from api.models.blocked_ip import BlockedIP, BlockedIPDB
+from api.models.allowed_ip import AllowedIP, AllowedIPDB
 from api.models.category import Category, CategoryDB
 from api.models.client import Client, ClientDB
 from api.models.domain import Domain, DomainDB
@@ -210,12 +210,12 @@ async def delete_client(
 
 
 # ============================================================================
-# Blocked IP CRUD
+# Allowed IP CRUD (default-deny DNS allowlist)
 # ============================================================================
 
 
-@router.get("/blocked_ip/")
-async def list_blocked_ips(
+@router.get("/allowed_ip/")
+async def list_allowed_ips(
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
     authorization: Annotated[str, Depends(check_authorization)],
     page_number: Annotated[int, Query(ge=0)] = 1,
@@ -225,52 +225,52 @@ async def list_blocked_ips(
     filter_value: Annotated[str | None, Query()] = None,
     filter_operator: Annotated[str, Query(pattern="^(eq|ne|gt|lt|gte|lte|like|in)$")] = "eq",
 ) -> ApiResponse:
-    """List blocked IPs with optional filtering, pagination, and ordering."""
+    """List allowed IPs with optional filtering, pagination, and ordering."""
     data, total = build_list_query(
-        BlockedIPDB, page_number, items_per_page, order_by,
+        AllowedIPDB, page_number, items_per_page, order_by,
         filter_field, filter_value, filter_operator,
     )
     return ApiResponse(success=True, message=str(total), data=data)
 
 
-@router.post("/blocked_ip/")
-async def create_blocked_ip(
-    blocked_ip: BlockedIP,
+@router.post("/allowed_ip/")
+async def create_allowed_ip(
+    allowed_ip: AllowedIP,
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
     authorization: Annotated[str, Depends(check_authorization)],
 ) -> ApiResponse:
-    """Block an IP address from using the DNS resolver."""
-    existing = BlockedIPDB.get_or_none(BlockedIPDB.ip == blocked_ip.ip)
+    """Allow an IP address to use the DNS resolver (default-deny allowlist)."""
+    existing = AllowedIPDB.get_or_none(AllowedIPDB.ip == allowed_ip.ip)
     if existing:
         return ApiResponse(
             success=True,
-            message="IP already blocked",
+            message="IP already allowed",
             data=existing.to_pydantic(),
         )
-    new_obj = BlockedIPDB.from_pydantic(blocked_ip)
+    new_obj = AllowedIPDB.from_pydantic(allowed_ip)
     new_obj.save(force_insert=True)
-    return ApiResponse(success=True, message="Blocked successfully", data=new_obj.to_pydantic())
+    return ApiResponse(success=True, message="Allowed successfully", data=new_obj.to_pydantic())
 
 
-@router.delete("/blocked_ip/")
-async def delete_blocked_ip(
+@router.delete("/allowed_ip/")
+async def delete_allowed_ip(
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
     authorization: Annotated[str, Depends(check_authorization)],
-    id: Annotated[int | None, Query(title="Blocked IP ID to delete")] = None,
-    ip: Annotated[str | None, Query(title="Blocked IP address to delete")] = None,
+    id: Annotated[int | None, Query(title="Allowed IP ID to delete")] = None,
+    ip: Annotated[str | None, Query(title="Allowed IP address to delete")] = None,
 ) -> ApiResponse:
-    """Unblock an IP by id or address."""
+    """Remove an IP from the DNS allowlist by id or address."""
     if id is not None:
-        existing = BlockedIPDB.get_or_none(BlockedIPDB.id == id)
+        existing = AllowedIPDB.get_or_none(AllowedIPDB.id == id)
     elif ip is not None:
-        existing = BlockedIPDB.get_or_none(BlockedIPDB.ip == ip.strip())
+        existing = AllowedIPDB.get_or_none(AllowedIPDB.ip == ip.strip())
     else:
-        raise HTTPException(status_code=400, detail="Blocked IP id or ip is required")
+        raise HTTPException(status_code=400, detail="Allowed IP id or ip is required")
     if not existing:
-        raise HTTPException(status_code=404, detail="Blocked IP not found")
+        raise HTTPException(status_code=404, detail="Allowed IP not found")
     deleted_data = existing.to_pydantic()
     existing.delete_instance()
-    return ApiResponse(success=True, message="Unblocked successfully", data=deleted_data)
+    return ApiResponse(success=True, message="Removed from allowlist", data=deleted_data)
 
 
 # ============================================================================
