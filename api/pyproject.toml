@@ -16,8 +16,14 @@ dependencies = [
     "psutil (>=7.2.2,<8.0.0)",
 ]
 
+[project.scripts]
+export-openapi = "export_openapi:main"
+
 [tool.poetry]
-packages = [{include = "api", from = "src"}]
+packages = [
+    {include = "api", from = "src"},
+    {include = "export_openapi", from = "src"},
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -1,0 +1,37 @@
+---
+description: Regenerate Orval API client after FastAPI changes; required before admin UI work
+alwaysApply: true
+---
+
+# Orval API client (admin ↔ api)
+
+The admin TypeScript client is **generated** from the FastAPI OpenAPI schema. Do not hand-edit `admin/src/lib/api/generated/`.
+
+## When to regenerate
+
+1. **After any API backend change** that affects HTTP routes, request/response models, query params, or status codes (`api/src/api/**`).
+2. **Before any admin frontend change** that calls the API or relies on generated hooks/types — regenerate first if the OpenAPI/`generated/` tree may be stale.
+
+## How to regenerate
+
+From the repo (one command from admin exports the spec then runs Orval):
+
+```bash
+cd admin && yarn api
+```
+
+Equivalent two-step flow:
+
+```bash
+cd api && poetry run export-openapi   # writes api/openapi.json
+cd admin && yarn api                  # orval reads ../api/openapi.json
+```
+
+- Spec path: `api/openapi.json` (committed; source for Orval).
+- Orval config: `admin/orval.config.ts` (file input, not a running server).
+- No need to start the API for codegen.
+
+## After regenerating
+
+- Commit `api/openapi.json` and updated files under `admin/src/lib/api/generated/` with the related API/UI change.
+- Update admin imports to new Orval helper names if routes/models were renamed.

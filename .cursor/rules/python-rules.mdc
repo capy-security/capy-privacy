@@ -39,6 +39,7 @@ Example:
 ```bash
 cd api && poetry run pytest tests/
 cd api && poetry run python -c "from api import ..."
+cd api && poetry run export-openapi   # writes openapi.json for Orval (see @orval-api-client.mdc)
 ```
 
 ## HTTP and API (FastAPI)

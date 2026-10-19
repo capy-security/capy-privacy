@@ -28,7 +28,9 @@ The admin app is built with SvelteKit (and Vite). Follow SvelteKit conventions:
 
 ## Orval (API client)
 
-Orval generates the TypeScript API client from the capy API OpenAPI spec. Config: `admin/orval.config.ts` (single backend **capy**). Generated code: `admin/src/lib/api/generated/` (endpoints by tag and `models/`). Regenerate with `yarn api` from `admin/`; do not edit generated files. Always pause and ask user to re-gen the files manually if needed when working on the frontend.
+Orval generates the TypeScript API client from `api/openapi.json` (exported via `poetry run export-openapi`). Config: `admin/orval.config.ts`. Generated code: `admin/src/lib/api/generated/`. **Do not edit generated files.**
+
+Regenerate with `cd admin && yarn api` (exports OpenAPI then runs Orval). See @orval-api-client.mdc — regenerate after API changes and before admin work that depends on the client.
 
 - HTTP calls go through the custom **fetch mutator** (`admin/src/lib/api/mutator.ts`): base URL, JSON headers, API envelope (`success` / `data`), and errors aligned with TanStack Query.
 
