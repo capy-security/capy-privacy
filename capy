@@ -24,11 +24,11 @@ import ssl
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from http.client import HTTPSConnection
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -485,24 +485,6 @@ def _recvexact(sock: ssl.SSLSocket | socket.socket, size: int) -> bytes:
     return bytes(buf)
 
 
-class _HttpsToIp(HTTPSConnection):
-    """HTTPSConnection that dials an IP but sends SNI/Host for a hostname."""
-
-    def __init__(self, ip: str, port: int, server_hostname: str, timeout: float):
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        super().__init__(ip, port=port, timeout=timeout, context=context)
-        self._server_hostname = server_hostname
-
-    def connect(self) -> None:
-        sock = socket.create_connection((self.host, self.port), self.timeout)
-        assert self._context is not None
-        self.sock = self._context.wrap_socket(
-            sock, server_hostname=self._server_hostname
-        )
-
-
 def dns_doh_query(
     server_ip: str,
     name: str,
@@ -512,28 +494,63 @@ def dns_doh_query(
     path: str = "/dns-query",
     timeout: float = 10.0,
 ) -> tuple[int, list[str], float]:
+    """POST application/dns-message over HTTP/2 (RFC 8484).
+
+    dnsdist rejects HTTP/1.1 with 505; stdlib http.client cannot negotiate h2,
+    so we shell out to curl (same approach as manual debugging).
+    """
+    curl = which("curl")
+    if not curl:
+        raise OSError("curl is required for DoH tests (HTTP/2 / RFC 8484)")
+
     body = build_dns_query(name)
-    conn = _HttpsToIp(server_ip, port, hostname, timeout)
+    url = f"https://{hostname}:{port}{path}"
     started = time.perf_counter()
-    try:
-        conn.request(
-            "POST",
-            path,
-            body=body,
-            headers={
-                "Content-Type": "application/dns-message",
-                "Accept": "application/dns-message",
-                "Host": hostname,
-            },
+    with tempfile.NamedTemporaryFile(prefix="capy-doh-req-") as req_f, tempfile.NamedTemporaryFile(
+        prefix="capy-doh-resp-"
+    ) as resp_f:
+        req_f.write(body)
+        req_f.flush()
+        proc = subprocess.run(
+            [
+                curl,
+                "-sS",
+                "-k",
+                "--http2",
+                "--max-time",
+                str(max(1, int(timeout))),
+                "--resolve",
+                f"{hostname}:{port}:{server_ip}",
+                "-X",
+                "POST",
+                url,
+                "-H",
+                "Content-Type: application/dns-message",
+                "-H",
+                "Accept: application/dns-message",
+                "--data-binary",
+                f"@{req_f.name}",
+                "-o",
+                resp_f.name,
+                "-w",
+                "%{http_code}",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
         )
-        resp = conn.getresponse()
-        data = resp.read()
         elapsed_ms = (time.perf_counter() - started) * 1000.0
-        if resp.status != 200:
-            return resp.status, [], elapsed_ms
-        return resp.status, parse_a_records(data), elapsed_ms
-    finally:
-        conn.close()
+        if proc.returncode != 0:
+            err = (proc.stderr or proc.stdout or f"curl exit {proc.returncode}").strip()
+            raise OSError(err)
+        try:
+            status = int((proc.stdout or "0").strip() or "0")
+        except ValueError as exc:
+            raise OSError(f"unexpected curl status output: {proc.stdout!r}") from exc
+        data = Path(resp_f.name).read_bytes()
+        if status != 200:
+            return status, [], elapsed_ms
+        return status, parse_a_records(data), elapsed_ms
 
 
 # ---------------------------------------------------------------------------
