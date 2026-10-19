@@ -104,22 +104,22 @@ http://{$IP_ADDRESS} {
 }
 
 # -----------------------------------------------------------------------------
-# Block page (IP) - HTTPS
+# Block page (IP) - HTTPS (disabled until IP cert exists under deploy/ssl/live/<IP>/)
 # -----------------------------------------------------------------------------
-https://{$IP_ADDRESS} {
-	tls /etc/letsencrypt/live/{$IP_ADDRESS}/fullchain.pem /etc/letsencrypt/live/{$IP_ADDRESS}/privkey.pem
-
-	root * /var/capy/blocked
-	file_server
-
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
-		X-XSS-Protection "1; mode=block"
-		Referrer-Policy "strict-origin-when-cross-origin"
-	}
-}
+# https://{$IP_ADDRESS} {
+# 	tls /etc/letsencrypt/live/{$IP_ADDRESS}/fullchain.pem /etc/letsencrypt/live/{$IP_ADDRESS}/privkey.pem
+#
+# 	root * /var/capy/blocked
+# 	file_server
+#
+# 	header {
+# 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+# 		X-Content-Type-Options "nosniff"
+# 		X-Frame-Options "DENY"
+# 		X-XSS-Protection "1; mode=block"
+# 		Referrer-Policy "strict-origin-when-cross-origin"
+# 	}
+# }
 
 # -----------------------------------------------------------------------------
 # User custom vhosts — ./deploy/caddy/conf.d/*.caddy (mounted as /etc/caddy/conf.d/)
