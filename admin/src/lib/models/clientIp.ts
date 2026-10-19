@@ -6,8 +6,8 @@ export interface ClientIpEntry {
 	registered: boolean;
 	client_id: number | null;
 	client_name: string | null;
-	blocked: boolean;
-	block_reason?: string;
+	allowed: boolean;
+	allow_reason?: string;
 }
 
 export interface ClientIpsResponse {

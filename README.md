@@ -95,6 +95,7 @@ After logging in, the sidebar gives access to:
 
 - **Domains** — Add, edit or remove domains; assign them to a category and set allow/block.
 - **Clients** — Manage DNS clients (devices by IP); link them to groups for filtering policy.
+- **Client IPs** — Default-deny allowlist: allow trusted source IPs seen in DNS metrics.
 - **Categories** — Define blocklist categories (e.g. ads, malware) and assign domains to them.
 - **Groups** — Create groups of clients and attach categories to apply filtering per group.
 - **Metrics** — Browse DNS query metrics (domains, clients, blocked/allowed) with filters and search.

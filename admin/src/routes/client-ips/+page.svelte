@@ -2,9 +2,9 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { authorizationStore } from '$lib/stores/authorization';
 	import {
-		createCreateBlockedIpDatabaseBlockedIpPost,
+		createCreateAllowedIpDatabaseAllowedIpPost,
 		createCreateClientDatabaseClientPost,
-		createDeleteBlockedIpDatabaseBlockedIpDelete,
+		createDeleteAllowedIpDatabaseAllowedIpDelete,
 	} from '$lib/api/generated/database/database';
 	import {
 		createClientIpsMetricsClientIpsGet,
@@ -17,7 +17,6 @@
 		ArrowPath,
 		ChevronLeft,
 		ChevronRight,
-		NoSymbol,
 		Plus,
 		ShieldCheck,
 		XMark,
@@ -84,7 +83,7 @@
 	}));
 	let isRegistering = $derived(createClientMutation.isPending);
 
-	const blockIpMutation = createCreateBlockedIpDatabaseBlockedIpPost(() => ({
+	const allowIpMutation = createCreateAllowedIpDatabaseAllowedIpPost(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
 			onSuccess: () => {
@@ -92,13 +91,13 @@
 				invalidateClientIps();
 			},
 			onError: (err) => {
-				actionError = err instanceof Error ? err.message : 'Failed to block IP';
+				actionError = err instanceof Error ? err.message : 'Failed to allow IP';
 				actionIp = null;
 			},
 		},
 	}));
 
-	const unblockIpMutation = createDeleteBlockedIpDatabaseBlockedIpDelete(() => ({
+	const revokeIpMutation = createDeleteAllowedIpDatabaseAllowedIpDelete(() => ({
 		request: { headers: { Authorization: `Bearer ${user.token}` } },
 		mutation: {
 			onSuccess: () => {
@@ -106,13 +105,13 @@
 				invalidateClientIps();
 			},
 			onError: (err) => {
-				actionError = err instanceof Error ? err.message : 'Failed to unblock IP';
+				actionError = err instanceof Error ? err.message : 'Failed to revoke IP';
 				actionIp = null;
 			},
 		},
 	}));
 
-	let isBlocking = $derived(blockIpMutation.isPending || unblockIpMutation.isPending);
+	let isUpdatingAllowlist = $derived(allowIpMutation.isPending || revokeIpMutation.isPending);
 
 	function formatTimestamp(value: string | null): string {
 		if (!value) return '—';
@@ -121,16 +120,16 @@
 		return date.toLocaleString();
 	}
 
-	function handleBlock(entry: ClientIpEntry) {
+	function handleAllow(entry: ClientIpEntry) {
 		actionError = null;
 		actionIp = entry.client_ip;
-		blockIpMutation.mutate({ data: { ip: entry.client_ip, reason: '' } });
+		allowIpMutation.mutate({ data: { ip: entry.client_ip, reason: '' } });
 	}
 
-	function handleUnblock(entry: ClientIpEntry) {
+	function handleRevoke(entry: ClientIpEntry) {
 		actionError = null;
 		actionIp = entry.client_ip;
-		unblockIpMutation.mutate({ params: { ip: entry.client_ip } });
+		revokeIpMutation.mutate({ params: { ip: entry.client_ip } });
 	}
 
 	function openRegisterModal(entry: ClientIpEntry) {
@@ -190,7 +189,7 @@
 		<div>
 			<h1 class="text-3xl font-bold text-white">DNS Client IPs</h1>
 			<p class="mt-1 text-sm text-gray-300">
-				IPs seen in DNS metrics. Register trusted devices or block unwanted sources.
+				IPs seen in DNS metrics. Default deny — allow trusted sources, register devices for filtering.
 			</p>
 		</div>
 		<button
@@ -259,23 +258,24 @@
 									{/if}
 								</td>
 								<td class="px-4 py-3 text-sm">
-									{#if entry.blocked}
-										<span
-											class="inline-flex rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-200"
-										>
-											Blocked
-										</span>
-									{:else if entry.registered}
+									{#if entry.allowed}
 										<span
 											class="inline-flex rounded-full bg-green-500/20 px-2.5 py-0.5 text-xs font-medium text-green-200"
 										>
-											Registered
+											Allowed
 										</span>
 									{:else}
 										<span
-											class="inline-flex rounded-full bg-yellow-500/20 px-2.5 py-0.5 text-xs font-medium text-yellow-200"
+											class="inline-flex rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-200"
 										>
-											Unknown
+											Denied
+										</span>
+									{/if}
+									{#if entry.registered}
+										<span
+											class="ml-1 inline-flex rounded-full bg-violet-500/20 px-2.5 py-0.5 text-xs font-medium text-violet-200"
+										>
+											Registered
 										</span>
 									{/if}
 								</td>
@@ -287,7 +287,7 @@
 										{#if !entry.registered}
 											<button
 												onclick={() => openRegisterModal(entry)}
-												disabled={actionIp === entry.client_ip || isBlocking}
+												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
 												class="inline-flex items-center gap-1 rounded-md bg-violet-600/80 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-600 disabled:opacity-50"
 												title="Register as client"
 											>
@@ -303,24 +303,24 @@
 											</span>
 										{/if}
 
-										{#if entry.blocked}
+										{#if entry.allowed}
 											<button
-												onclick={() => handleUnblock(entry)}
-												disabled={actionIp === entry.client_ip || isBlocking}
+												onclick={() => handleRevoke(entry)}
+												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
 												class="inline-flex items-center gap-1 rounded-md bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:opacity-50"
-												title="Unblock IP"
+												title="Remove from allowlist"
 											>
-												Unblock
+												Revoke
 											</button>
 										{:else}
 											<button
-												onclick={() => handleBlock(entry)}
-												disabled={actionIp === entry.client_ip || isBlocking}
-												class="inline-flex items-center gap-1 rounded-md bg-red-600/80 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
-												title="Block IP"
+												onclick={() => handleAllow(entry)}
+												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
+												class="inline-flex items-center gap-1 rounded-md bg-green-600/80 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+												title="Allow IP"
 											>
-												<NoSymbol class="h-4 w-4" />
-												Block
+												<ShieldCheck class="h-4 w-4" />
+												Allow
 											</button>
 										{/if}
 									</div>
