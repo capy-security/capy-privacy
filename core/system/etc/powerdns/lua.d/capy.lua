@@ -25,12 +25,34 @@ local function cache_get(key)
     return entry
 end
 
-local function cache_set(key, blocked, domain_ip)
+local function cache_set(key, blocked, domain_ip, category_name)
     decision_cache[key] = {
         blocked = blocked,
         domain_ip = domain_ip,
+        category_name = category_name,
         expires_at = os.time() + decision_cache_ttl_seconds
     }
+end
+
+-- Annotate dq for protobuf metrics (listener uses appliedPolicy as blocked=true).
+-- Does not change the DNS answer; caller still sets rcode / addAnswer.
+local function apply_ip_deny_policy(dq, client_ip)
+    dq.variable = true
+    dq.appliedPolicy.policyName = "capy-deny"
+    dq.appliedPolicy.policyType = pdns.policytypes.ClientIP
+    dq.appliedPolicy.policyKind = pdns.policykinds.Drop
+    dq.appliedPolicy.policyHit = client_ip
+end
+
+local function apply_block_policy(dq, domain, category_name)
+    dq.variable = true
+    dq.appliedPolicy.policyName = "capy-blocked"
+    dq.appliedPolicy.policyType = pdns.policytypes.QName
+    dq.appliedPolicy.policyKind = pdns.policykinds.Custom
+    dq.appliedPolicy.policyHit = domain
+    if category_name and category_name ~= "" then
+        dq:addPolicyTag(category_name)
+    end
 end
 
 
@@ -98,6 +120,7 @@ function preresolve(dq)
 
     if not is_client_ip_allowed(client_ip) then
         pdnslog(string.format("IP DENIED (not in allowlist): %s", client_ip), pdns.loglevels.Info)
+        apply_ip_deny_policy(dq, client_ip)
         dq.rcode = pdns.REFUSED
         return true
     end
@@ -123,8 +146,9 @@ function preresolve(dq)
     if cached then
         if cached.blocked and cached.domain_ip then
             pdnslog(string.format("CACHE BLOCKED: %s -> %s (client: %s)", domain, cached.domain_ip, client_ip), pdns.loglevels.Debug)
-            dq.rcode=0 -- make it a normal answer
-            dq:addAnswer( pdns.A, cached.domain_ip )
+            apply_block_policy(dq, domain, cached.category_name)
+            dq.rcode = 0 -- make it a normal answer
+            dq:addAnswer(pdns.A, cached.domain_ip)
             return true
         end
 
@@ -148,8 +172,10 @@ function preresolve(dq)
     -- Block if the client is explicitly linked to the domain's category via a group,
     -- OR if the client IP doesn't exist in the client table at all (default: block all).
     local request = string.format(
-        [[SELECT domain.name, domain.id, domain.isactive, domain.ip AS domain_ip
+        [[SELECT domain.name, domain.id, domain.isactive, domain.ip AS domain_ip,
+                 category.name AS category_name
           FROM domain
+          LEFT JOIN category ON category.id = domain.category_id
           WHERE domain.name = '%s'
             AND domain.isactive = 1
             AND (
@@ -175,14 +201,16 @@ function preresolve(dq)
     if next(result) then
         local domain_ip = result[1].domain_ip
         local domain_name = result[1].name
+        local category_name = result[1].category_name
         pdnslog(string.format("BLOCKED: %s -> %s (client: %s)", domain_name, domain_ip, client_ip), pdns.loglevels.Debug)
-        cache_set(key, true, domain_ip)
-        dq.rcode=0 -- make it a normal answer
-        dq:addAnswer( pdns.A, domain_ip )
+        cache_set(key, true, domain_ip, category_name)
+        apply_block_policy(dq, domain, category_name)
+        dq.rcode = 0 -- make it a normal answer
+        dq:addAnswer(pdns.A, domain_ip)
         -- con:close()
         return true
     else
-        cache_set(key, false, nil)
+        cache_set(key, false, nil, nil)
         -- pdnslog("domain not found in blacklist", pdns.loglevels.Info)
         -- con:close()
         return false

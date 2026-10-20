@@ -39,8 +39,10 @@ logging:
   # See: https://docs.powerdns.com/recursor/lua-config/protobuf.html
   protobuf_servers:
     - servers: ["127.0.0.1:6000"] # Change port if your collector uses a different one
-      logQueries: true # Log incoming queries from clients
-      logResponses: false # Log responses sent to clients
+      # Responses carry appliedPolicy + policy tags from capy.lua; collector
+      # persists DNSResponse only (skips queries) to avoid double-counting.
+      logQueries: false
+      logResponses: true
       timeout: 2 # Timeout in seconds when sending messages
       maxQueuedEntries: 250 # Max entries in memory if server unreachable
       reconnectWaitTime: 5 # Wait time between reconnection attempts
