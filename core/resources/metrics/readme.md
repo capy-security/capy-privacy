@@ -1,111 +1,77 @@
-# DNS Metrics Listener
+# DNS metrics collector
 
-Simple TCP listener for PowerDNS/dnsdist protobuf DNS messages.
+Lightweight Go TCP collector for PowerDNS protobuf DNS messages. Writes into
+the shared SQLite `metric` table (same DB as the API / Lua filter).
+
+## Contract with `capy.lua`
+
+Lua sets PowerDNS policy metadata on blocked decisions:
+
+| Policy name | Meaning | Category |
+| --- | --- | --- |
+| `capy-blocked` | Domain sinkhole | Policy tag = `category.name` |
+| `capy-deny` | Client IP not allowlisted | No category tag |
+
+The collector sets `blocked=true` when `appliedPolicy` is non-empty, stores
+`applied_policy`, and maps the first matching policy tag to `category_id`.
+
+Recursor must log **responses** (`logResponses: true`); the collector persists
+only `DNSResponseType` messages so query+response pairs are not double-counted.
 
 ## Setup
 
-1. Install protobuf compiler:
-   ```bash
-   # macOS
-   brew install protobuf
-   
-   # Debian/Ubuntu
-   apt-get install protobuf-compiler
-   ```
-
-2. Install the Go protobuf plugin (required for code generation):
-   ```bash
-   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-   ```
-   Ensure `$GOPATH/bin` or `$HOME/go/bin` is in your `PATH` so `protoc` can find `protoc-gen-go`.
-
-3. Generate Go protobuf code:
-   ```bash
-   ./generate.sh
-   ```
-
-4. Install Go dependencies:
-   ```bash
-   go mod tidy
-   ```
-
-5. Build:
-   ```bash
-   go build -o listener listener.go
-   ```
-
-## Cross-compilation
-
-To build for different architectures (useful for Docker containers):
-
-### Build for Linux AMD64:
 ```bash
-GOOS=linux GOARCH=amd64 go build -o listener-linux-amd64 listener.go
+# protobuf codegen (optional; pb/ is committed)
+./generate.sh
+
+go mod tidy
+go build -o collector ./cmd/collector/
 ```
 
-### Build for Linux ARM64:
-```bash
-GOOS=linux GOARCH=arm64 go build -o listener-linux-arm64 listener.go
-```
-
-### Build for both:
-```bash
-GOOS=linux GOARCH=amd64 go build -o listener-linux-amd64 listener.go
-GOOS=linux GOARCH=arm64 go build -o listener-linux-arm64 listener.go
-```
-
-## Usage
+### Cross-compile for Docker
 
 ```bash
-# Default: listen on 0.0.0.0:6000 with text output only
-./listener
-
-# Custom port
-./listener 6000
-
-# Custom host and port
-./listener 0.0.0.0 6000
-
-# Enable debug mode (verbose logging, shows raw data)
-./listener --debug
-
-# Output options (can combine multiple):
-./listener --output-text              # Text output to stdout
-./listener --output-json              # JSON output to stdout
-./listener --output-sqlite            # SQLite database output
-./listener --output-text --output-json --output-sqlite  # All outputs
-
-# Note: If no output is specified, nothing will be displayed (useful for SQLite-only mode)
-
-# SQLite database path:
-./listener --output-sqlite --db-path=/path/to/database.db
-
-# Other options:
-./listener --no-filter-localhost      # Include localhost messages
-./listener --debug --output-json      # Debug mode with JSON output
+GOOS=linux GOARCH=amd64 go build -o collector-linux-amd64 ./cmd/collector/
+GOOS=linux GOARCH=arm64 go build -o collector-linux-arm64 ./cmd/collector/
 ```
 
-## Output Formats
+## CLI
 
-All outputs use the same data structure matching the database schema:
+```bash
+collector help
+collector version
+collector selftest
 
-- `timestamp`: Query timestamp (RFC3339Nano for JSON, formatted string for text)
-- `client_ip`: Client IP address
-- `domain`: Domain name (without trailing dot)
-- `query_type`: DNS query type (A, AAAA, MX, etc.) - optional
-- `protocol`: Transport protocol (UDP, TCP, DoT, DoH, etc.) - optional
-- `blocked`: Whether query was blocked by blacklist
-- `category_id`: Category ID if blocked - optional
+# Production (supervisord)
+collector listen --sink sqlite
 
-### Text Output
-Human-readable format printed to stdout (default).
+# Debug / dry-run
+collector listen --sink text,json --dry-run --debug
+collector listen --listen 0.0.0.0:6000 --db-path=/var/capy/database/database.db
 
-### JSON Output
-One JSON object per line, printed to stdout. Suitable for log aggregation tools.
+# Retention (CLI only)
+collector cleanup --days 30
+collector cleanup --days 7 --dry-run
+```
 
-### SQLite Output
-Writes to SQLite database with:
-- Batch inserts (100 metrics or every 5 seconds)
-- Automatic table creation
-- Indexes for common query patterns
-- WAL mode enabled for better concurrency
+### `listen` flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--listen` | `0.0.0.0:6000` | TCP bind address |
+| `--db-path` | `/var/capy/database/database.db` | SQLite path |
+| `--sink` | `sqlite` | Comma list: `sqlite`, `json`, `text` |
+| `--dry-run` | false | Skip SQLite writes |
+| `--buffer-size` | 10000 | Per-sink channel buffer |
+| `--batch-size` | 500 | SQLite multi-row INSERT size |
+| `--flush-interval` | 5s | Max time before flush |
+| `--filter-localhost` | true | Drop From=127.0.0.1 |
+| `--stats-interval` | 1m | Counter log line (`0` disables) |
+| `--debug` | false | Verbose I/O logging |
+
+## Design notes
+
+- Bounded buffers; drops + counters when full (never blocks PDNS forever).
+- Single SQLite writer goroutine, WAL, batched inserts.
+- Category name→id cache refreshed on TTL / miss.
+- Adds `applied_policy` column on first SQLite open if the API has not migrated yet.

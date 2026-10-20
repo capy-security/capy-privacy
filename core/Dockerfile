@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# DNS core: PowerDNS Recursor + dnsdist + metrics listener (Alpine)
+# DNS core: PowerDNS Recursor + dnsdist + metrics collector (Alpine)
 # Build context: ./core (e.g. sudo docker compose build capy-core)
 
 # -----------------------------------------------------------------------------
@@ -29,15 +29,15 @@ RUN apk add --no-cache \
 COPY system/ /
 COPY resources/metrics/ /tmp/metrics/
 
-# Architecture-specific metrics listener binary
+# Architecture-specific metrics collector binary
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-    cp /tmp/metrics/listener-linux-amd64 /usr/bin/listener; \
+    cp /tmp/metrics/collector-linux-amd64 /usr/bin/collector; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-    cp /tmp/metrics/listener-linux-arm64 /usr/bin/listener; \
+    cp /tmp/metrics/collector-linux-arm64 /usr/bin/collector; \
     else \
     echo "Unsupported architecture: $TARGETARCH" && exit 1; \
     fi && \
-    chmod +x /usr/bin/listener && \
+    chmod +x /usr/bin/collector && \
     rm -rf /tmp/metrics
 
 # Alpine pdns-recursor expects /etc/pdns; we keep config in /etc/powerdns and symlink
