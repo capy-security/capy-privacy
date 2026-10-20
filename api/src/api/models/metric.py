@@ -26,6 +26,7 @@ class Metric(BaseModel):
                 "protocol": "UDP",
                 "blocked": False,
                 "category_id": None,
+                "applied_policy": None,
             },
         }
     )
@@ -68,6 +69,12 @@ class Metric(BaseModel):
         title="Category ID",
         description="Reference to category table if domain was blocked",
     )
+    applied_policy: str | None = Field(
+        default=None,
+        max_length=128,
+        title="Applied policy",
+        description="PowerDNS appliedPolicy name (e.g. capy-blocked, capy-deny)",
+    )
 
 
 class MetricDB(Model):
@@ -79,6 +86,7 @@ class MetricDB(Model):
     protocol = CharField(max_length=10, null=True)
     blocked = BooleanField(default=False, index=True)
     category = ForeignKeyField(CategoryDB, null=True, index=True, backref="metric")
+    applied_policy = CharField(max_length=128, null=True)
 
     class Meta:
         table_name = "metric"
@@ -97,7 +105,8 @@ class MetricDB(Model):
                     query_type={self.query_type},
                     protocol={self.protocol},
                     blocked={self.blocked},
-                    category_id={self.category.id if self.category else None}
+                    category_id={self.category.id if self.category else None},
+                    applied_policy={self.applied_policy}
                 )>"""
 
     @classmethod
@@ -112,6 +121,7 @@ class MetricDB(Model):
             protocol=metric.protocol,
             blocked=metric.blocked,
             category=metric.category_id,
+            applied_policy=metric.applied_policy,
         )
 
     def to_pydantic(self):
@@ -125,4 +135,5 @@ class MetricDB(Model):
             protocol=self.protocol,
             blocked=self.blocked,
             category_id=self.category.id if self.category else None,
+            applied_policy=self.applied_policy,
         )

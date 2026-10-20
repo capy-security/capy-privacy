@@ -3423,6 +3423,19 @@
             ],
             "title": "Category ID",
             "description": "Reference to category table if domain was blocked"
+          },
+          "applied_policy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied policy",
+            "description": "PowerDNS appliedPolicy name (e.g. capy-blocked, capy-deny)"
           }
         },
         "type": "object",

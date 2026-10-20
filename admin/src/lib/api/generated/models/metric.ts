@@ -30,4 +30,6 @@ export interface Metric {
   blocked?: boolean;
   /** Reference to category table if domain was blocked */
   category_id?: number | null;
+  /** PowerDNS appliedPolicy name (e.g. capy-blocked, capy-deny) */
+  applied_policy?: string | null;
 }

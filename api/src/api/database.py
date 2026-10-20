@@ -95,6 +95,19 @@ def _seed_bootstrap_allowed_ip():
         logger.warning(f"Could not seed bootstrap allowed IP: {e}")
 
 
+def _ensure_metric_applied_policy_column():
+    """Add applied_policy to existing metric tables (create_tables safe=True won't alter)."""
+    try:
+        cols = [row[1] for row in database.execute_sql("PRAGMA table_info(metric)").fetchall()]
+        if "applied_policy" not in cols:
+            database.execute_sql(
+                "ALTER TABLE metric ADD COLUMN applied_policy VARCHAR(128)"
+            )
+            logger.info("Added applied_policy column to metric table")
+    except Exception as e:
+        logger.warning(f"Could not ensure metric.applied_policy column: {e}")
+
+
 def _ensure_tables():
     _bind_models()
     database.create_tables(
@@ -112,6 +125,7 @@ def _ensure_tables():
         ],
         safe=True,
     )
+    _ensure_metric_applied_policy_column()
     _seed_bootstrap_allowed_ip()
 
 
