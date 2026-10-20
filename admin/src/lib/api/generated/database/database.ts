@@ -548,7 +548,7 @@ export const getListAllowedIpsDatabaseAllowedIpGetUrl = (params?: ListAllowedIps
 }
 
 /**
- * List allowed IPs with optional filtering, pagination, and ordering.
+ * List allowed IPs/CIDRs with optional filtering, pagination, and ordering.
  * @summary List Allowed Ips
  */
 export const listAllowedIpsDatabaseAllowedIpGet = async (params?: ListAllowedIpsDatabaseAllowedIpGetParams, options?: Parameters<typeof fetchApi>[1]): Promise<listAllowedIpsDatabaseAllowedIpGetResponse> => {
@@ -663,7 +663,7 @@ export const getCreateAllowedIpDatabaseAllowedIpPostUrl = () => {
 }
 
 /**
- * Allow an IP address to use the DNS resolver (default-deny allowlist).
+ * Allow an IP address or CIDR network to use the DNS resolver (default-deny allowlist).
  * @summary Create Allowed Ip
  */
 export const createAllowedIpDatabaseAllowedIpPost = async (allowedIP: AllowedIP, options?: Parameters<typeof fetchApi>[1]): Promise<createAllowedIpDatabaseAllowedIpPostResponse> => {
@@ -782,7 +782,7 @@ export const getDeleteAllowedIpDatabaseAllowedIpDeleteUrl = (params?: DeleteAllo
 }
 
 /**
- * Remove an IP from the DNS allowlist by id or address.
+ * Remove an IP or CIDR from the DNS allowlist by id or address.
  * @summary Delete Allowed Ip
  */
 export const deleteAllowedIpDatabaseAllowedIpDelete = async (params?: DeleteAllowedIpDatabaseAllowedIpDeleteParams, options?: Parameters<typeof fetchApi>[1]): Promise<deleteAllowedIpDatabaseAllowedIpDeleteResponse> => {

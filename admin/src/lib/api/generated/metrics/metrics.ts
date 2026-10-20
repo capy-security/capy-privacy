@@ -325,7 +325,7 @@ export const getClientIpsMetricsClientIpsGetUrl = (params?: ClientIpsMetricsClie
  * List distinct client IPs seen in DNS metrics.
  *
  * Aggregates query counts and first/last seen timestamps, and marks each IP
- * as registered (client table) or allowed (allowed_ip allowlist).
+ * as registered (client table) or allowed (allowed_ip allowlist, including CIDR).
  * @summary Client Ips
  */
 export const clientIpsMetricsClientIpsGet = async (params?: ClientIpsMetricsClientIpsGetParams, options?: Parameters<typeof fetchApi>[1]): Promise<clientIpsMetricsClientIpsGetResponse> => {

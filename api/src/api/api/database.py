@@ -225,7 +225,7 @@ async def list_allowed_ips(
     filter_value: Annotated[str | None, Query()] = None,
     filter_operator: Annotated[str, Query(pattern="^(eq|ne|gt|lt|gte|lte|like|in)$")] = "eq",
 ) -> ApiResponse:
-    """List allowed IPs with optional filtering, pagination, and ordering."""
+    """List allowed IPs/CIDRs with optional filtering, pagination, and ordering."""
     data, total = build_list_query(
         AllowedIPDB, page_number, items_per_page, order_by,
         filter_field, filter_value, filter_operator,
@@ -239,12 +239,12 @@ async def create_allowed_ip(
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
     authorization: Annotated[str, Depends(check_authorization)],
 ) -> ApiResponse:
-    """Allow an IP address to use the DNS resolver (default-deny allowlist)."""
+    """Allow an IP address or CIDR network to use the DNS resolver (default-deny allowlist)."""
     existing = AllowedIPDB.get_or_none(AllowedIPDB.ip == allowed_ip.ip)
     if existing:
         return ApiResponse(
             success=True,
-            message="IP already allowed",
+            message="Entry already allowed",
             data=existing.to_pydantic(),
         )
     new_obj = AllowedIPDB.from_pydantic(allowed_ip)
@@ -257,9 +257,12 @@ async def delete_allowed_ip(
     database: Annotated[SqliteDatabase, Depends(get_database_fastapi)],
     authorization: Annotated[str, Depends(check_authorization)],
     id: Annotated[int | None, Query(title="Allowed IP ID to delete")] = None,
-    ip: Annotated[str | None, Query(title="Allowed IP address to delete")] = None,
+    ip: Annotated[
+        str | None,
+        Query(title="Allowed IP address or CIDR to delete"),
+    ] = None,
 ) -> ApiResponse:
-    """Remove an IP from the DNS allowlist by id or address."""
+    """Remove an IP or CIDR from the DNS allowlist by id or address."""
     if id is not None:
         existing = AllowedIPDB.get_or_none(AllowedIPDB.id == id)
     elif ip is not None:

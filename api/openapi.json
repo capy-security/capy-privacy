@@ -589,7 +589,7 @@
           "database"
         ],
         "summary": "List Allowed Ips",
-        "description": "List allowed IPs with optional filtering, pagination, and ordering.",
+        "description": "List allowed IPs/CIDRs with optional filtering, pagination, and ordering.",
         "operationId": "list_allowed_ips_database_allowed_ip__get",
         "parameters": [
           {
@@ -718,7 +718,7 @@
           "database"
         ],
         "summary": "Create Allowed Ip",
-        "description": "Allow an IP address to use the DNS resolver (default-deny allowlist).",
+        "description": "Allow an IP address or CIDR network to use the DNS resolver (default-deny allowlist).",
         "operationId": "create_allowed_ip_database_allowed_ip__post",
         "parameters": [
           {
@@ -773,7 +773,7 @@
           "database"
         ],
         "summary": "Delete Allowed Ip",
-        "description": "Remove an IP from the DNS allowlist by id or address.",
+        "description": "Remove an IP or CIDR from the DNS allowlist by id or address.",
         "operationId": "delete_allowed_ip_database_allowed_ip__delete",
         "parameters": [
           {
@@ -805,7 +805,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Allowed IP address to delete"
+              "title": "Allowed IP address or CIDR to delete"
             }
           },
           {
@@ -2742,7 +2742,7 @@
           "metrics"
         ],
         "summary": "Client Ips",
-        "description": "List distinct client IPs seen in DNS metrics.\n\nAggregates query counts and first/last seen timestamps, and marks each IP\nas registered (client table) or allowed (allowed_ip allowlist).",
+        "description": "List distinct client IPs seen in DNS metrics.\n\nAggregates query counts and first/last seen timestamps, and marks each IP\nas registered (client table) or allowed (allowed_ip allowlist, including CIDR).",
         "operationId": "client_ips_metrics_client_ips__get",
         "parameters": [
           {
@@ -3061,9 +3061,10 @@
           },
           "ip": {
             "type": "string",
-            "maxLength": 45,
+            "maxLength": 64,
             "minLength": 1,
-            "title": "Allowed IP address"
+            "title": "Allowed IP address or CIDR network",
+            "description": "Single IPv4/IPv6 address or CIDR (e.g. 37.167.0.0/16)."
           },
           "reason": {
             "type": "string",
@@ -3082,6 +3083,10 @@
           {
             "ip": "203.0.113.10",
             "reason": "Home LTE"
+          },
+          {
+            "ip": "37.167.0.0/16",
+            "reason": "Mobile ISP CGNAT"
           }
         ]
       },

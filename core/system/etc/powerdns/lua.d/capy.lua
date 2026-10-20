@@ -4,8 +4,12 @@ env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
 local decision_cache = {}
 local decision_cache_ttl_seconds = 60
-local ip_allow_cache = {}
-local ip_allow_cache_ttl_seconds = 60
+-- In-memory allowlist as a PowerDNS NetmaskGroup (hosts + CIDRs).
+-- Rebuilt from SQLite at most once every allow_nmg_ttl_seconds so each DNS
+-- query does not hit the DB; portal changes can take up to that long to apply.
+local allow_nmg = nil
+local allow_nmg_expires_at = 0
+local allow_nmg_ttl_seconds = 60
 
 local function cache_key(client_ip, domain)
     return client_ip .. "|" .. domain
@@ -81,45 +85,75 @@ local function is_loopback_ip(client_ip)
     return client_ip == "127.0.0.1" or client_ip == "::1"
 end
 
-local function is_client_ip_allowed(client_ip)
-    if is_loopback_ip(client_ip) then
-        return true
-    end
-
-    local cache_entry = ip_allow_cache[client_ip]
-    if cache_entry and cache_entry.expires_at > os.time() then
-        return cache_entry.allowed
-    end
+-- Load every allowed_ip row into a fresh NetmaskGroup.
+-- Example DB rows: "203.0.113.10", "37.167.0.0/16"
+--   → nmg:addMask("203.0.113.10")   -- treated as /32
+--   → nmg:addMask("37.167.0.0/16")  -- whole /16
+-- Then nmg:match(37.167.37.237) is true; nmg:match(8.8.8.8) is false.
+local function load_allow_nmg()
+    local nmg = newNMG()
 
     if not con then
         con = connect_database()
         if not con then
-            -- Fail closed: deny when DB is unavailable
-            return false
+            -- Fail closed: empty group denies all non-loopback clients
+            return nmg
         end
     end
 
-    local escaped_client_ip = con:escape(client_ip)
-    local request = string.format(
-        "SELECT 1 FROM allowed_ip WHERE ip = '%s' LIMIT 1",
-        escaped_client_ip
-    )
-    local result, error = exec_sql(request)
-    local allowed = (error == "" and next(result) ~= nil)
+    local result, error = exec_sql("SELECT ip FROM allowed_ip")
+    if error ~= "" then
+        pdnslog(string.format("Allowlist reload failed: %s", error), pdns.loglevels.Error)
+        return nmg
+    end
 
-    ip_allow_cache[client_ip] = {
-        allowed = allowed,
-        expires_at = os.time() + ip_allow_cache_ttl_seconds,
-    }
-    return allowed
+    for _, row in ipairs(result) do
+        local mask = row.ip
+        if mask and mask ~= "" then
+            local ok, err = pcall(function()
+                nmg:addMask(mask)
+            end)
+            if not ok then
+                pdnslog(
+                    string.format("Invalid allowlist entry skipped: %s (%s)", mask, tostring(err)),
+                    pdns.loglevels.Warning
+                )
+            end
+        end
+    end
+
+    return nmg
+end
+
+-- Return cached NetmaskGroup, or rebuild if missing / TTL expired.
+-- Timeline example (ttl = 60s):
+--   t=0   first query → SELECT + build nmg, expires_at = 60
+--   t=1..59  further queries → reuse same nmg (no DB)
+--   t=60  next query → rebuild from DB again (picks up portal edits)
+local function get_allow_nmg()
+    if allow_nmg and allow_nmg_expires_at > os.time() then
+        return allow_nmg
+    end
+    allow_nmg = load_allow_nmg()
+    allow_nmg_expires_at = os.time() + allow_nmg_ttl_seconds
+    return allow_nmg
+end
+
+local function is_client_ip_allowed(remoteaddr)
+    local client_ip = remoteaddr:toString()
+    if is_loopback_ip(client_ip) then
+        return true
+    end
+    -- PowerDNS: match ComboAddress against all masks in the group
+    return get_allow_nmg():match(remoteaddr)
 end
 
 
 function preresolve(dq)
     local client_ip = dq.remoteaddr:toString()
 
-    if not is_client_ip_allowed(client_ip) then
-        pdnslog(string.format("IP DENIED (not in allowlist): %s", client_ip), pdns.loglevels.Info)
+    if not is_client_ip_allowed(dq.remoteaddr) then
+        pdnslog(string.format("IP DENIED (not in allowlist): %s", client_ip), pdns.loglevels.Debug)
         apply_ip_deny_policy(dq, client_ip)
         dq.rcode = pdns.REFUSED
         return true

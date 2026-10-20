@@ -8,6 +8,8 @@ export interface ClientIpEntry {
 	client_name: string | null;
 	allowed: boolean;
 	allow_reason?: string;
+	/** Allowlist entry that matched (host IP or CIDR). */
+	allow_match?: string | null;
 }
 
 export interface ClientIpsResponse {

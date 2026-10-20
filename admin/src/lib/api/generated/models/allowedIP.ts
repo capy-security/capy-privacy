@@ -9,8 +9,9 @@
 export interface AllowedIP {
   id?: number | null;
   /**
+     * Single IPv4/IPv6 address or CIDR (e.g. 37.167.0.0/16).
      * @minLength 1
-     * @maxLength 45
+     * @maxLength 64
      */
   ip: string;
   /**

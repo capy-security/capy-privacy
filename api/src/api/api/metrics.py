@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated
 from api.database import get_database_fastapi
-from api.models.allowed_ip import AllowedIPDB
+from api.models.allowed_ip import AllowedIPDB, find_matching_allow_entry
 from api.models.client import ClientDB
 from api.models.metric import MetricDB
 from api.models.api import ApiResponse
@@ -21,6 +21,23 @@ def _format_timestamp(value: datetime | str | None) -> str | None:
     if isinstance(value, str):
         return value
     return value.isoformat()
+
+
+def _allow_fields(client_ip: str, allow_entries: list[tuple[str, str]]) -> dict:
+    """Resolve allowlist membership, including CIDR coverage."""
+    match = find_matching_allow_entry(client_ip, allow_entries)
+    if match is None:
+        return {
+            "allowed": False,
+            "allow_reason": "",
+            "allow_match": None,
+        }
+    entry, reason = match
+    return {
+        "allowed": True,
+        "allow_reason": reason or "",
+        "allow_match": entry,
+    }
 
 
 router = APIRouter(
@@ -181,15 +198,15 @@ async def client_ips(
     List distinct client IPs seen in DNS metrics.
 
     Aggregates query counts and first/last seen timestamps, and marks each IP
-    as registered (client table) or allowed (allowed_ip allowlist).
+    as registered (client table) or allowed (allowed_ip allowlist, including CIDR).
     """
     response = ApiResponse(success=False, message="", data={})
 
     try:
-        allowed_ips = {row.ip for row in AllowedIPDB.select(AllowedIPDB.ip)}
-        allowed_reasons = {
-            row.ip: row.reason for row in AllowedIPDB.select(AllowedIPDB.ip, AllowedIPDB.reason)
-        }
+        allow_entries = [
+            (row.ip, row.reason or "")
+            for row in AllowedIPDB.select(AllowedIPDB.ip, AllowedIPDB.reason)
+        ]
         clients_by_ip = {row.ip: row for row in ClientDB.select()}
 
         rows = (
@@ -205,7 +222,6 @@ async def client_ips(
         results: list[dict] = []
         for row in rows:
             client = clients_by_ip.get(row.client_ip)
-            is_allowed = row.client_ip in allowed_ips
             results.append(
                 {
                     "client_ip": row.client_ip,
@@ -215,20 +231,19 @@ async def client_ips(
                     "registered": client is not None,
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,
-                    "allowed": is_allowed,
-                    "allow_reason": allowed_reasons.get(row.client_ip, "") if is_allowed else "",
+                    **_allow_fields(row.client_ip, allow_entries),
                 }
             )
 
-        # Include allowed IPs that have no metrics yet
+        # Include allowlist entries (hosts or CIDRs) that have no metrics yet
         seen_ips = {item["client_ip"] for item in results}
-        for allowed_ip in allowed_ips:
-            if allowed_ip in seen_ips:
+        for entry, reason in allow_entries:
+            if entry in seen_ips:
                 continue
-            client = clients_by_ip.get(allowed_ip)
+            client = clients_by_ip.get(entry)
             results.append(
                 {
-                    "client_ip": allowed_ip,
+                    "client_ip": entry,
                     "query_count": 0,
                     "last_seen": None,
                     "first_seen": None,
@@ -236,7 +251,8 @@ async def client_ips(
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,
                     "allowed": True,
-                    "allow_reason": allowed_reasons.get(allowed_ip, ""),
+                    "allow_reason": reason,
+                    "allow_match": entry,
                 }
             )
 

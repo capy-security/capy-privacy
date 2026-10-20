@@ -5,12 +5,15 @@
 		createCreateAllowedIpDatabaseAllowedIpPost,
 		createCreateClientDatabaseClientPost,
 		createDeleteAllowedIpDatabaseAllowedIpDelete,
+		createListAllowedIpsDatabaseAllowedIpGet,
+		getListAllowedIpsDatabaseAllowedIpGetQueryKey,
 	} from '$lib/api/generated/database/database';
 	import {
 		createClientIpsMetricsClientIpsGet,
 		getClientIpsMetricsClientIpsGetQueryKey,
 	} from '$lib/api/generated/metrics/metrics';
-	import type { ApiResponse } from '$lib/api/generated/models';
+	import type { ApiResponse, AllowedIP } from '$lib/api/generated/models';
+	import { parseTableResponse } from '$lib/api/fetchTableData';
 	import type { ClientIpEntry, ClientIpsResponse } from '$lib/models/clientIp';
 	import { getErrorMessage } from '$lib/utils/errorHandler';
 	import {
@@ -19,6 +22,7 @@
 		ChevronRight,
 		Plus,
 		ShieldCheck,
+		Trash,
 		XMark,
 	} from 'svelte-heros-v2';
 
@@ -43,6 +47,11 @@
 	let registerName = $state('');
 	let registerDescription = $state('');
 	let registerError = $state<string | null>(null);
+
+	let isAllowModalOpen = $state(false);
+	let allowNetwork = $state('');
+	let allowReason = $state('');
+	let allowFormError = $state<string | null>(null);
 
 	let orderBy = $derived(`${sortDesc ? '-' : ''}${sortField}`);
 
@@ -74,14 +83,43 @@
 		})
 	);
 
+	const allowlistQuery = createListAllowedIpsDatabaseAllowedIpGet<{
+		items: AllowedIP[];
+		totalItems: number;
+	}>(
+		() => ({ page_number: 1, items_per_page: 500, order_by: 'ip' }),
+		() => ({
+			request: { headers: { Authorization: `Bearer ${user.token}` } },
+			query: {
+				select: (res) =>
+					parseTableResponse<AllowedIP>(
+						{ status: res.status, data: res.data as ApiResponse | undefined },
+						{ itemsPerPage: 500, currentPage: 1 }
+					),
+			},
+		})
+	);
+
 	let clients = $derived(clientIpsQuery.data?.clients ?? []);
 	let totalItems = $derived(clientIpsQuery.data?.totalItems ?? 0);
 	let isLoading = $derived(clientIpsQuery.isPending);
 	let error = $derived((clientIpsQuery.error as Error | undefined)?.message ?? null);
 	let totalPages = $derived(Math.max(1, Math.ceil(totalItems / itemsPerPage)));
 
+	let allowlist = $derived(allowlistQuery.data?.items ?? []);
+	let allowlistError = $derived((allowlistQuery.error as Error | undefined)?.message ?? null);
+
 	function invalidateClientIps() {
 		queryClient.invalidateQueries({ queryKey: getClientIpsMetricsClientIpsGetQueryKey() });
+	}
+
+	function invalidateAllowlist() {
+		queryClient.invalidateQueries({ queryKey: getListAllowedIpsDatabaseAllowedIpGetQueryKey() });
+	}
+
+	function invalidateAll() {
+		invalidateClientIps();
+		invalidateAllowlist();
 	}
 
 	const createClientMutation = createCreateClientDatabaseClientPost(() => ({
@@ -103,11 +141,17 @@
 		mutation: {
 			onSuccess: () => {
 				actionIp = null;
-				invalidateClientIps();
+				closeAllowModal();
+				invalidateAll();
 			},
 			onError: (err) => {
-				actionError = err instanceof Error ? err.message : 'Failed to allow IP';
-				actionIp = null;
+				const message = err instanceof Error ? err.message : 'Failed to allow entry';
+				if (isAllowModalOpen) {
+					allowFormError = message;
+				} else {
+					actionError = message;
+					actionIp = null;
+				}
 			},
 		},
 	}));
@@ -117,16 +161,24 @@
 		mutation: {
 			onSuccess: () => {
 				actionIp = null;
-				invalidateClientIps();
+				invalidateAll();
 			},
 			onError: (err) => {
-				actionError = err instanceof Error ? err.message : 'Failed to revoke IP';
+				actionError = err instanceof Error ? err.message : 'Failed to revoke entry';
 				actionIp = null;
 			},
 		},
 	}));
 
 	let isUpdatingAllowlist = $derived(allowIpMutation.isPending || revokeIpMutation.isPending);
+
+	function isCidr(value: string | null | undefined): boolean {
+		return typeof value === 'string' && value.includes('/');
+	}
+
+	function canRevokeExact(entry: ClientIpEntry): boolean {
+		return Boolean(entry.allowed && entry.allow_match && entry.allow_match === entry.client_ip);
+	}
 
 	function formatTimestamp(value: string | null): string {
 		if (!value) return '—';
@@ -142,9 +194,46 @@
 	}
 
 	function handleRevoke(entry: ClientIpEntry) {
+		if (!entry.allow_match || entry.allow_match !== entry.client_ip) {
+			actionError = `This IP is covered by ${entry.allow_match ?? 'a subnet'}. Remove that allowlist entry instead.`;
+			return;
+		}
 		actionError = null;
 		actionIp = entry.client_ip;
 		revokeIpMutation.mutate({ params: { ip: entry.client_ip } });
+	}
+
+	function handleRevokeAllowlistEntry(entry: AllowedIP) {
+		if (entry.id == null) return;
+		actionError = null;
+		actionIp = entry.ip;
+		revokeIpMutation.mutate({ params: { id: entry.id } });
+	}
+
+	function openAllowModal() {
+		allowNetwork = '';
+		allowReason = '';
+		allowFormError = null;
+		isAllowModalOpen = true;
+	}
+
+	function closeAllowModal() {
+		isAllowModalOpen = false;
+		allowNetwork = '';
+		allowReason = '';
+		allowFormError = null;
+	}
+
+	function handleAllowSubmit() {
+		const trimmed = allowNetwork.trim();
+		if (!trimmed) {
+			allowFormError = 'IP or CIDR is required';
+			return;
+		}
+		allowFormError = null;
+		allowIpMutation.mutate({
+			data: { ip: trimmed, reason: allowReason.trim() },
+		});
 	}
 
 	function openRegisterModal(entry: ClientIpEntry) {
@@ -174,6 +263,10 @@
 			registerError = 'IP address is required';
 			return;
 		}
+		if (isCidr(trimmedIp)) {
+			registerError = 'Register a single host IP, not a CIDR network';
+			return;
+		}
 		if (!trimmedName) {
 			registerError = 'Name is required';
 			return;
@@ -195,7 +288,7 @@
 	}
 
 	function refreshClientIps() {
-		invalidateClientIps();
+		invalidateAll();
 	}
 
 	function onFilterIpInput() {
@@ -234,18 +327,90 @@
 		<div>
 			<h1 class="text-3xl font-bold text-white">DNS Client IPs</h1>
 			<p class="mt-1 text-sm text-gray-300">
-				IPs seen in DNS metrics. Default deny — allow trusted sources, register devices for filtering.
+				Default deny — allow trusted IPs or CIDR subnets, register devices for filtering.
 			</p>
 		</div>
-		<button
-			onclick={refreshClientIps}
-			disabled={isLoading}
-			class="flex items-center gap-2 self-start rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-		>
-			<ArrowPath class="h-5 w-5 {isLoading ? 'animate-spin' : ''}" />
-			Refresh
-		</button>
+		<div class="flex flex-wrap items-center gap-2">
+			<button
+				onclick={openAllowModal}
+				class="flex items-center gap-2 rounded-md bg-green-600/80 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
+			>
+				<Plus class="h-5 w-5" />
+				Allow IP / subnet
+			</button>
+			<button
+				onclick={refreshClientIps}
+				disabled={isLoading}
+				class="flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<ArrowPath class="h-5 w-5 {isLoading ? 'animate-spin' : ''}" />
+				Refresh
+			</button>
+		</div>
 	</div>
+
+	<section class="mb-8 rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm">
+		<div class="border-b border-white/10 px-4 py-3">
+			<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-200">Allowlist</h2>
+			<p class="mt-0.5 text-xs text-gray-400">
+				Hosts and CIDR networks permitted to query DNS (e.g. <code class="text-gray-300">37.167.0.0/16</code>).
+			</p>
+		</div>
+		{#if allowlistError}
+			<div class="p-4">
+				<p class="text-sm text-red-200">{allowlistError}</p>
+			</div>
+		{:else if allowlistQuery.isPending && allowlist.length === 0}
+			<div class="p-4 text-sm text-gray-300">Loading allowlist...</div>
+		{:else if allowlist.length === 0}
+			<div class="p-4 text-sm text-gray-300">No allowlist entries yet.</div>
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="min-w-full divide-y divide-white/10">
+					<thead class="bg-white/5">
+						<tr>
+							<th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-300"
+								>IP / CIDR</th
+							>
+							<th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-300"
+								>Reason</th
+							>
+							<th class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-gray-300"
+								>Actions</th
+							>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-white/10">
+						{#each allowlist as entry (entry.id ?? entry.ip)}
+							<tr class="hover:bg-white/5">
+								<td class="px-4 py-2 text-sm font-medium text-white">
+									{entry.ip}
+									{#if isCidr(entry.ip)}
+										<span
+											class="ml-2 inline-flex rounded-full bg-sky-500/20 px-2 py-0.5 text-xs font-medium text-sky-200"
+											>Subnet</span
+										>
+									{/if}
+								</td>
+								<td class="px-4 py-2 text-sm text-gray-300">{entry.reason || '—'}</td>
+								<td class="px-4 py-2 text-right">
+									<button
+										onclick={() => handleRevokeAllowlistEntry(entry)}
+										disabled={actionIp === entry.ip || isUpdatingAllowlist}
+										class="inline-flex items-center gap-1 rounded-md bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+										title="Remove from allowlist"
+									>
+										<Trash class="h-4 w-4" />
+										Remove
+									</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
 
 	<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
 		<div class="min-w-0 flex-1">
@@ -355,6 +520,14 @@
 										>
 											Allowed
 										</span>
+										{#if entry.allow_match && entry.allow_match !== entry.client_ip}
+											<span
+												class="ml-1 inline-flex rounded-full bg-sky-500/20 px-2.5 py-0.5 text-xs font-medium text-sky-200"
+												title={entry.allow_reason || undefined}
+											>
+												via {entry.allow_match}
+											</span>
+										{/if}
 									{:else}
 										<span
 											class="inline-flex rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-200"
@@ -375,7 +548,7 @@
 								<td class="px-4 py-3 text-sm text-gray-300">{formatTimestamp(entry.first_seen)}</td>
 								<td class="px-4 py-3 text-right">
 									<div class="flex items-center justify-end gap-2">
-										{#if !entry.registered}
+										{#if !entry.registered && !isCidr(entry.client_ip)}
 											<button
 												onclick={() => openRegisterModal(entry)}
 												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
@@ -385,7 +558,7 @@
 												<Plus class="h-4 w-4" />
 												Register
 											</button>
-										{:else}
+										{:else if entry.registered}
 											<span
 												class="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-green-300"
 												title="Already registered"
@@ -394,7 +567,7 @@
 											</span>
 										{/if}
 
-										{#if entry.allowed}
+										{#if canRevokeExact(entry)}
 											<button
 												onclick={() => handleRevoke(entry)}
 												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
@@ -403,6 +576,13 @@
 											>
 												Revoke
 											</button>
+										{:else if entry.allowed}
+											<span
+												class="px-2 py-1.5 text-xs text-gray-400"
+												title="Covered by allowlist entry {entry.allow_match}. Remove it from the allowlist above."
+											>
+												via subnet
+											</span>
 										{:else}
 											<button
 												onclick={() => handleAllow(entry)}
@@ -446,6 +626,87 @@
 		{/if}
 	{/if}
 </div>
+
+{#if isAllowModalOpen}
+	<div
+		class="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="allow-network-title"
+	>
+		<div class="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 shadow-xl">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 id="allow-network-title" class="text-xl font-bold text-white">Allow IP / subnet</h2>
+				<button
+					onclick={closeAllowModal}
+					class="rounded-md p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+					aria-label="Close"
+				>
+					<XMark class="h-5 w-5" />
+				</button>
+			</div>
+
+			{#if allowFormError}
+				<div class="mb-4 rounded-lg border border-red-500/30 bg-red-500/20 p-3">
+					<p class="text-sm text-red-200">{allowFormError}</p>
+				</div>
+			{/if}
+
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleAllowSubmit();
+				}}
+				class="space-y-4"
+			>
+				<div>
+					<label for="allow-network" class="mb-1 block text-sm font-medium text-gray-200"
+						>IP or CIDR</label
+					>
+					<input
+						id="allow-network"
+						type="text"
+						bind:value={allowNetwork}
+						required
+						placeholder="e.g. 37.167.0.0/16 or 203.0.113.10"
+						class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-gray-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+					/>
+					<p class="mt-1 text-xs text-gray-400">
+						Use CIDR for provider ranges (mobile CGNAT). Broad subnets allow anyone on that network.
+					</p>
+				</div>
+				<div>
+					<label for="allow-reason" class="mb-1 block text-sm font-medium text-gray-200"
+						>Reason</label
+					>
+					<input
+						id="allow-reason"
+						type="text"
+						bind:value={allowReason}
+						placeholder="e.g. Orange mobile"
+						class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-gray-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+					/>
+				</div>
+				<div class="flex justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onclick={closeAllowModal}
+						class="rounded-md px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={allowIpMutation.isPending}
+						class="rounded-md bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+					>
+						{allowIpMutation.isPending ? 'Saving...' : 'Allow'}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 {#if isRegisterModalOpen}
 	<div
