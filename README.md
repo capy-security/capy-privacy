@@ -118,10 +118,17 @@ capy-privacy/
 ├── core/                 # dnsdist + PowerDNS config (baked into image)
 ├── front/                # Caddyfile + blocked page (baked into image)
 ├── admin/                # SvelteKit source for the admin UI (built into front image)
+├── docs/                 # Architecture and component docs
 └── deploy/               # Per-install data (ssl, database, ACLs, custom Caddy, www)
 ```
 
+## Docs
+
+- [PowerDNS Lua policy (`capy.lua`)](docs/lua.md) — allowlist, CIDR NetmaskGroup cache, sinkholing, metrics policies
+- [Public hosting](docs/public-hosting.md) — VPS / Internet TLS setup notes
+
 Caddy logs go to stdout/stderr — use `sudo docker compose logs -f capy-front`.
+
 ## License
 
 This project is licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0). See [LICENSE](LICENSE).
