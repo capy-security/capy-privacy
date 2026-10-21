@@ -50,7 +50,7 @@ flowchart TD
   AOK --> QT{qtype == A?}
   QT -->|no| REC[return false → recurse]
   QT -->|yes| CACHE{decision cache<br/>hit?}
-  CACHE -->|blocked| SINK[Answer sinkhole IP<br/>+ policy capy-blocked]
+  CACHE -->|blocked| SINK[Answer sinkhole IP<br/>+ tag capy-blocked]
   CACHE -->|allowed| REC
   CACHE -->|miss| SQL[SQLite domain/client lookup]
   SQL -->|row found| SINK2[Cache + sinkhole answer]
@@ -139,7 +139,7 @@ t=60+    Next query → rebuild → CIDR is active
 ### On deny
 
 ```lua
-apply_ip_deny_policy(dq, client_ip)  -- policyName = "capy-deny" only
+apply_ip_deny_policy(dq, client_ip)  -- addPolicyTag("capy-deny")
 dq.rcode = pdns.REFUSED
 return true
 ```
@@ -210,7 +210,7 @@ Query: `A tracker.ads.` from `203.0.113.10`
 2. qtype A → continue  
 3. Cache miss → SQL finds the domain (client in group with `ads`)  
 4. Answer: `tracker.ads. A 127.0.0.1` (or whatever `domain.ip` is)  
-5. Policy: `capy-blocked`, tag `ads`  
+5. Tags: `capy-blocked`, `ads`  
 6. Cache blocked decision for 60s  
 
 Query: `A example.com.` from same client → no row → cache allowed → recurse.
@@ -218,17 +218,15 @@ Query: `A example.com.` from same client → no row → cache allowed → recurs
 ### On block
 
 ```lua
-apply_block_policy(dq, domain, category_name)  -- sets policyName (+ category tag)
+apply_block_policy(dq, domain, category_name)  -- tags: capy-blocked (+ category)
 dq.rcode = 0
 dq:addAnswer(pdns.A, domain_ip)  -- sinkhole
 return true
 ```
 
-Only set `appliedPolicy.policyName` (and optional policy tags) from `preresolve`.
-Do **not** set `policyKind` / `policyCustom` / `policyHit` when answering yourself
-with `addAnswer` + `return true`: RPZ-style kinds make the Recursor apply extra
-actions and can throw `Attempt to print an unset DNSName` or
-`Trying to cast a lua variable from "string" to "…exception_ptr…"`.
+Use **`addPolicyTag` only** for metrics. Do **not** touch `dq.appliedPolicy`
+(RPZ object): half-setting it while answering with `addAnswer` + `return true`
+causes Recursor errors (`Attempt to print an unset DNSName`, Lua cast failures).
 
 If SQLite is down for the domain lookup, the script logs a warning and
 **fails open for filtering** (`return false` → recurse). The allowlist check
@@ -238,14 +236,14 @@ still fails closed when its own reload cannot load masks.
 
 ## 3. Policy metadata (metrics)
 
-Lua does not write metrics itself. It sets PowerDNS `appliedPolicy` (and
-optional policy tags) on `dq`. The Recursor exports responses over protobuf;
-the Go collector persists them.
+Lua does not write metrics itself. It adds protobuf **policy tags** on `dq`.
+The Recursor exports responses; the Go collector maps reserved tags to
+`blocked` / `applied_policy`, and category-name tags to `category_id`.
 
-| Policy name | When | Category tag |
+| Tag | When | Extra tags |
 | --- | --- | --- |
 | `capy-deny` | Client not on allowlist | none |
-| `capy-blocked` | Domain sinkholed | `category.name` (e.g. `ads`) |
+| `capy-blocked` | Domain sinkholed | optional `category.name` (e.g. `ads`) |
 
 See also [`core/resources/metrics/readme.md`](../core/resources/metrics/readme.md).
 
@@ -317,7 +315,7 @@ IP denials are **debug** so they do not flood production logs. Raise
 
 1. Client `203.0.113.10` registered and in group “Home” with category `ads`  
 2. Queries `A doubleclick.net.` (active domain, sinkhole `127.0.0.1`)  
-3. SQL match → answer `127.0.0.1`, policy `capy-blocked`, tag `ads`  
+3. SQL match → answer `127.0.0.1`, tags `capy-blocked` + `ads`  
 
 ### D. Allowlisted guest, not registered
 

@@ -143,7 +143,7 @@ func handleConn(conn net.Conn, opts Options, fan *sink.Fanout, cat *category.Cac
 			continue
 		}
 
-		// Prefer responses so appliedPolicy/tags (set by Lua) are present.
+		// Prefer responses so policy tags (set by Lua) are present.
 		// Skip queries to avoid double-counting when both are logged.
 		if msg.GetType() != pb.PBDNSMessage_DNSResponseType {
 			continue

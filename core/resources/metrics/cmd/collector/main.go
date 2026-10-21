@@ -82,7 +82,7 @@ func cmdListen(args []string) int {
 		fmt.Fprintf(os.Stderr, `Usage: collector listen [flags]
 
 Run the PowerDNS protobuf TCP collector. Prefer DNSResponse messages so
-appliedPolicy and policy tags from capy.lua are available.
+policy tags from capy.lua (capy-blocked / capy-deny / category) are available.
 
 `)
 		fs.PrintDefaults()
@@ -169,7 +169,6 @@ func cmdSelftest(args []string) int {
 	}
 	_ = fs.Parse(args)
 
-	policy := "capy-blocked"
 	qname := "ads.example.com."
 	msg := &pb.PBDNSMessage{
 		Type:           pb.PBDNSMessage_DNSResponseType.Enum(),
@@ -182,8 +181,7 @@ func cmdSelftest(args []string) int {
 			QType: proto.Uint32(1),
 		},
 		Response: &pb.PBDNSMessage_DNSResponse{
-			AppliedPolicy: &policy,
-			Tags:          []string{"ads"},
+			Tags: []string{"capy-blocked", "ads"},
 		},
 	}
 
@@ -215,7 +213,7 @@ func cmdSelftest(args []string) int {
 		log.Printf("unexpected client_ip: %s", m.ClientIP)
 		return 1
 	}
-	if len(m.Tags) != 1 || m.Tags[0] != "ads" {
+	if len(m.Tags) != 2 || m.Tags[0] != "capy-blocked" || m.Tags[1] != "ads" {
 		log.Printf("unexpected tags: %v", m.Tags)
 		return 1
 	}

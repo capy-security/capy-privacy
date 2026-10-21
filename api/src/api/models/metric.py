@@ -73,7 +73,7 @@ class Metric(BaseModel):
         default=None,
         max_length=128,
         title="Applied policy",
-        description="PowerDNS appliedPolicy name (e.g. capy-blocked, capy-deny)",
+        description="Block reason from Lua policy tags (e.g. capy-blocked, capy-deny)",
     )
 
 

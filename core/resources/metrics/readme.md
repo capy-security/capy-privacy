@@ -5,15 +5,19 @@ the shared SQLite `metric` table (same DB as the API / Lua filter).
 
 ## Contract with `capy.lua`
 
-Lua sets PowerDNS policy metadata on blocked decisions:
+Lua signals decisions with **protobuf policy tags** only (`dq:addPolicyTag`).
+It does **not** set `appliedPolicy` (RPZ object) — that breaks self-built
+sinkhole answers in the Recursor.
 
-| Policy name | Meaning | Category |
-| --- | --- | --- |
-| `capy-blocked` | Domain sinkhole | Policy tag = `category.name` |
-| `capy-deny` | Client IP not allowlisted | No category tag |
+| Tag | Meaning |
+| --- | --- |
+| `capy-blocked` | Domain sinkhole |
+| `capy-deny` | Client IP not allowlisted |
+| `<category.name>` | Optional category (e.g. `ads`) |
 
-The collector sets `blocked=true` when `appliedPolicy` is non-empty, stores
-`applied_policy`, and maps the first matching policy tag to `category_id`.
+The collector sets `blocked=true` when tags include a reserved `capy-*` tag,
+stores that name in `applied_policy`, and maps the first remaining tag that
+matches a `category` row to `category_id`.
 
 Recursor must log **responses** (`logResponses: true`); the collector persists
 only `DNSResponseType` messages so query+response pairs are not double-counted.

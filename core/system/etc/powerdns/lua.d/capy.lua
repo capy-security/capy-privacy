@@ -38,19 +38,17 @@ local function cache_set(key, blocked, domain_ip, category_name)
     }
 end
 
--- Annotate dq for protobuf metrics (collector treats non-empty appliedPolicy as blocked).
--- Only set policyName (+ optional tags). Do NOT set policyKind/Type/Hit/Trigger here:
--- preresolve owns the answer via rcode/addAnswer; setting policyKind (Custom/Drop/…)
--- makes the Recursor try to apply RPZ-style actions and can throw opaque Lua cast
--- errors (unset DNSName, string→exception_ptr).
+-- Annotate dq for protobuf metrics via policy tags only (never touch appliedPolicy).
+-- appliedPolicy is the RPZ object; half-setting it breaks sinkhole answers with
+-- "Attempt to print an unset DNSName". Collector maps reserved tags to blocked.
 local function apply_ip_deny_policy(dq, _client_ip)
     dq.variable = true
-    dq.appliedPolicy.policyName = "capy-deny"
+    dq:addPolicyTag("capy-deny")
 end
 
 local function apply_block_policy(dq, _domain, category_name)
     dq.variable = true
-    dq.appliedPolicy.policyName = "capy-blocked"
+    dq:addPolicyTag("capy-blocked")
     if category_name and category_name ~= "" then
         dq:addPolicyTag(category_name)
     end

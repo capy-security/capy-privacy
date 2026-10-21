@@ -76,16 +76,12 @@ func FromProtobuf(msg *pb.PBDNSMessage) Metric {
 		protocol = &s
 	}
 
-	blocked := false
-	var appliedPolicy *string
 	var tags []string
 	if response := msg.GetResponse(); response != nil {
-		if name := response.GetAppliedPolicy(); name != "" {
-			blocked = true
-			appliedPolicy = &name
-		}
 		tags = append(tags, response.GetTags()...)
 	}
+	// Lua signals blocks via reserved policy tags (not appliedPolicy / RPZ).
+	blocked, appliedPolicy := policyFromTags(tags)
 
 	return Metric{
 		Timestamp:     timestamp,
@@ -97,6 +93,23 @@ func FromProtobuf(msg *pb.PBDNSMessage) Metric {
 		AppliedPolicy: appliedPolicy,
 		Tags:          tags,
 	}
+}
+
+// Reserved tags set by capy.lua (addPolicyTag). Category names are other tags.
+var reservedPolicyTags = map[string]string{
+	"capy-blocked": "capy-blocked",
+	"capy-deny":    "capy-deny",
+}
+
+func policyFromTags(tags []string) (blocked bool, appliedPolicy *string) {
+	for _, tag := range tags {
+		key := strings.ToLower(strings.TrimSpace(tag))
+		if name, ok := reservedPolicyTags[key]; ok {
+			n := name
+			return true, &n
+		}
+	}
+	return false, nil
 }
 
 // IsLocalhostFrom reports whether the message From address is 127.0.0.1.
