@@ -40,11 +40,13 @@ end
 
 -- Annotate dq for protobuf metrics (listener uses appliedPolicy as blocked=true).
 -- Does not change the DNS answer; caller still sets rcode / addAnswer.
+-- Use NoAction: Custom would require policyCustom (CNAME DNSName) and throws
+-- "Attempt to print an unset DNSName" when that field is left empty.
 local function apply_ip_deny_policy(dq, client_ip)
     dq.variable = true
     dq.appliedPolicy.policyName = "capy-deny"
     dq.appliedPolicy.policyType = pdns.policytypes.ClientIP
-    dq.appliedPolicy.policyKind = pdns.policykinds.Drop
+    dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
     dq.appliedPolicy.policyHit = client_ip
 end
 
@@ -52,8 +54,9 @@ local function apply_block_policy(dq, domain, category_name)
     dq.variable = true
     dq.appliedPolicy.policyName = "capy-blocked"
     dq.appliedPolicy.policyType = pdns.policytypes.QName
-    dq.appliedPolicy.policyKind = pdns.policykinds.Custom
+    dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
     dq.appliedPolicy.policyHit = domain
+    dq.appliedPolicy.policyTrigger = domain
     if category_name and category_name ~= "" then
         dq:addPolicyTag(category_name)
     end

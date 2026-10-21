@@ -218,11 +218,15 @@ Query: `A example.com.` from same client → no row → cache allowed → recurs
 ### On block
 
 ```lua
-apply_block_policy(dq, domain, category_name)
+apply_block_policy(dq, domain, category_name)  -- policyKind = NoAction
 dq.rcode = 0
 dq:addAnswer(pdns.A, domain_ip)  -- sinkhole
 return true
 ```
+
+`policyKind` must be `NoAction` (not `Custom`). `Custom` expects
+`appliedPolicy.policyCustom` to be a CNAME target; leaving it unset makes the
+Recursor throw `Attempt to print an unset DNSName` while handling the answer.
 
 If SQLite is down for the domain lookup, the script logs a warning and
 **fails open for filtering** (`return false` → recurse). The allowlist check
