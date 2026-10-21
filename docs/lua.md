@@ -139,7 +139,7 @@ t=60+    Next query → rebuild → CIDR is active
 ### On deny
 
 ```lua
-apply_ip_deny_policy(dq, client_ip)  -- appliedPolicy = "capy-deny"
+apply_ip_deny_policy(dq, client_ip)  -- policyName = "capy-deny" only
 dq.rcode = pdns.REFUSED
 return true
 ```
@@ -218,15 +218,17 @@ Query: `A example.com.` from same client → no row → cache allowed → recurs
 ### On block
 
 ```lua
-apply_block_policy(dq, domain, category_name)  -- policyKind = NoAction
+apply_block_policy(dq, domain, category_name)  -- sets policyName (+ category tag)
 dq.rcode = 0
 dq:addAnswer(pdns.A, domain_ip)  -- sinkhole
 return true
 ```
 
-`policyKind` must be `NoAction` (not `Custom`). `Custom` expects
-`appliedPolicy.policyCustom` to be a CNAME target; leaving it unset makes the
-Recursor throw `Attempt to print an unset DNSName` while handling the answer.
+Only set `appliedPolicy.policyName` (and optional policy tags) from `preresolve`.
+Do **not** set `policyKind` / `policyCustom` / `policyHit` when answering yourself
+with `addAnswer` + `return true`: RPZ-style kinds make the Recursor apply extra
+actions and can throw `Attempt to print an unset DNSName` or
+`Trying to cast a lua variable from "string" to "…exception_ptr…"`.
 
 If SQLite is down for the domain lookup, the script logs a warning and
 **fails open for filtering** (`return false` → recurse). The allowlist check

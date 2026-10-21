@@ -38,25 +38,19 @@ local function cache_set(key, blocked, domain_ip, category_name)
     }
 end
 
--- Annotate dq for protobuf metrics (listener uses appliedPolicy as blocked=true).
--- Does not change the DNS answer; caller still sets rcode / addAnswer.
--- Use NoAction: Custom would require policyCustom (CNAME DNSName) and throws
--- "Attempt to print an unset DNSName" when that field is left empty.
-local function apply_ip_deny_policy(dq, client_ip)
+-- Annotate dq for protobuf metrics (collector treats non-empty appliedPolicy as blocked).
+-- Only set policyName (+ optional tags). Do NOT set policyKind/Type/Hit/Trigger here:
+-- preresolve owns the answer via rcode/addAnswer; setting policyKind (Custom/Drop/…)
+-- makes the Recursor try to apply RPZ-style actions and can throw opaque Lua cast
+-- errors (unset DNSName, string→exception_ptr).
+local function apply_ip_deny_policy(dq, _client_ip)
     dq.variable = true
     dq.appliedPolicy.policyName = "capy-deny"
-    dq.appliedPolicy.policyType = pdns.policytypes.ClientIP
-    dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
-    dq.appliedPolicy.policyHit = client_ip
 end
 
-local function apply_block_policy(dq, domain, category_name)
+local function apply_block_policy(dq, _domain, category_name)
     dq.variable = true
     dq.appliedPolicy.policyName = "capy-blocked"
-    dq.appliedPolicy.policyType = pdns.policytypes.QName
-    dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
-    dq.appliedPolicy.policyHit = domain
-    dq.appliedPolicy.policyTrigger = domain
     if category_name and category_name ~= "" then
         dq:addPolicyTag(category_name)
     end
@@ -104,9 +98,9 @@ local function load_allow_nmg()
         end
     end
 
-    local result, error = exec_sql("SELECT ip FROM allowed_ip")
-    if error ~= "" then
-        pdnslog(string.format("Allowlist reload failed: %s", error), pdns.loglevels.Error)
+    local result, sql_err = exec_sql("SELECT ip FROM allowed_ip")
+    if sql_err ~= "" then
+        pdnslog(string.format("Allowlist reload failed: %s", sql_err), pdns.loglevels.Error)
         return nmg
     end
 
@@ -227,10 +221,10 @@ function preresolve(dq)
         , escaped_domain, escaped_client_ip, escaped_client_ip)
     pdnslog(request, pdns.loglevels.Debug)
 
-    -- execute the sql query
-    local result, error = exec_sql(request)
-    if error ~= "" then
-        pdnslog(string.format("SQL lookup failed for domain=%s client=%s: %s", domain, client_ip, error), pdns.loglevels.Error)
+    -- execute the sql query (never name a local "error" — shadows Lua's error())
+    local result, sql_err = exec_sql(request)
+    if sql_err ~= "" then
+        pdnslog(string.format("SQL lookup failed for domain=%s client=%s: %s", domain, client_ip, sql_err), pdns.loglevels.Error)
         return false
     end
     -- if result is a non empty array of objets
