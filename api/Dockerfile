@@ -1,37 +1,37 @@
 # syntax=docker/dockerfile:1
-# Multi-stage: build Python package with Poetry, then minimal runtime
+# Multi-stage: sync with uv into a venv, then copy venv only
 # Build context: ./api (sudo docker compose build capy-api)
+# Keep WORKDIR identical across stages so venv shebangs stay valid.
 
 # -----------------------------------------------------------------------------
-# Stage 1: build the package
+# Stage 1: build / sync
 # -----------------------------------------------------------------------------
-FROM python:3.14-alpine AS builder
+FROM python:3.15-alpine3.24 AS builder
 
-WORKDIR /build
+COPY --from=ghcr.io/astral-sh/uv:0.13 /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
+
+WORKDIR /capy
 
 # Build deps for C extensions (e.g. argon2-cffi)
 RUN apk add --no-cache gcc musl-dev
 
-RUN pip install --no-cache-dir poetry
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-install-project --no-dev --no-editable
 
-COPY . .
-
-RUN poetry build
+COPY src ./src
+RUN uv sync --locked --no-dev --no-editable
 
 # -----------------------------------------------------------------------------
 # Stage 2: runtime
 # -----------------------------------------------------------------------------
-FROM python:3.14-alpine
+FROM python:3.15-alpine3.24
 
 WORKDIR /capy
 
-COPY --from=builder /build/dist/ ./dist/
-
-# Build deps needed for C extensions (e.g. argon2-cffi); remove after pip install to keep image small
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev \
-    && pip install --no-cache-dir ./dist/*.tar.gz \
-    && apk del .build-deps \
-    && rm -rf ./dist
+COPY --from=builder /capy/.venv /capy/.venv
+ENV PATH="/capy/.venv/bin:$PATH"
 
 RUN mkdir -p /var/capy/database/
 

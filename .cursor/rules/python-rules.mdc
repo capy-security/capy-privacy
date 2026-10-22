@@ -1,12 +1,12 @@
 ---
-description: Python tooling and style — Poetry, FastAPI, Pydantic, peewee
+description: Python tooling and style — uv, FastAPI, Pydantic, peewee
 alwaysApply: false
 globs: "**/*.py"
 ---
 
 # Python rules
 
-This repo uses python 3.14+ and poetry for env and dependencies.
+This repo uses Python 3.13+ (Docker image 3.15) and uv for env and dependencies.
 
 ## Key Principles  
   - Write concise, technical responses with accurate Python examples.
@@ -23,13 +23,13 @@ This repo uses python 3.14+ and poetry for env and dependencies.
   - Always use f-string in print or logging.
   - Comment the code with clear explanations when needed.
 
-## Running Python (Poetry)
+## Running Python (uv)
 
-This repo uses Poetry for dependency and environment management.
- Always run Python and tools via Poetry so the correct virtualenv is used.
+This repo uses uv for dependency and environment management.
+ Always run Python and tools via uv so the correct virtualenv is used.
 
-- Python: `poetry run python ...`
-- Pytest: `poetry run pytest ...`
+- Python: `uv run python ...`
+- Pytest: `uv run pytest ...`
 
 Run from the directory that contains `pyproject.toml` for the project you're working on. 
 In this repo the only Python app is **api** (REST API).
@@ -37,9 +37,9 @@ In this repo the only Python app is **api** (REST API).
 Example:
 
 ```bash
-cd api && poetry run pytest tests/
-cd api && poetry run python -c "from api import ..."
-cd api && poetry run export-openapi   # writes openapi.json for Orval (see @orval-api-client.mdc)
+cd api && uv run pytest tests/
+cd api && uv run python -c "from api import ..."
+cd api && uv run export-openapi   # writes openapi.json for Orval (see @orval-api-client.mdc)
 ```
 
 ## HTTP and API (FastAPI)

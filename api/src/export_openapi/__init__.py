@@ -2,7 +2,7 @@
 
 Run from the ``api`` project root:
 
-    poetry run export-openapi
+    uv run export-openapi
 """
 
 from __future__ import annotations
