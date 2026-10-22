@@ -3,7 +3,7 @@
 
 Usage:
   ./capy setup [--domain DOMAIN] [--ip IP]
-  ./capy ssl [--email EMAIL]
+  ./capy ssl [--email EMAIL] [--reissue-ecdsa]
   ./capy test [--domain DOMAIN] [--ip IP] [--no-perf] [--perf N]
   ./capy build | up | down | restart
 
@@ -320,7 +320,7 @@ def live_cert_ready(hostname: str) -> bool:
     return (live / "fullchain.pem").is_file() and (live / "privkey.pem").is_file()
 
 
-def cmd_ssl(email: str | None) -> None:
+def cmd_ssl(email: str | None, *, reissue_ecdsa: bool = False) -> None:
     check_prerequisites(for_ssl=True)
     ensure_deploy_layout()
     cfg = load_config()
@@ -347,9 +347,18 @@ def cmd_ssl(email: str | None) -> None:
         "--logs-dir",
         str(SSL_LOGS),
     ]
+    # ECDSA P-256: smaller handshake than RSA-2048 (DoH/DoT latency)
+    ecdsa_opts = ["--key-type", "ecdsa", "--elliptic-curve", "secp256r1"]
 
-    if renewal_configs_exist() and all(live_cert_ready(h) for h in cfg.cert_hostnames):
-        info("Existing certbot renewal config detected — renewing.")
+    can_renew = (
+        not reissue_ecdsa
+        and renewal_configs_exist()
+        and all(live_cert_ready(h) for h in cfg.cert_hostnames)
+    )
+
+    if can_renew:
+        info("Existing certbot renewal config detected — renewing (keeps current key type).")
+        info("  Tip: ./capy ssl --reissue-ecdsa  to replace RSA certs with ECDSA P-256.")
         run([*base, "renew", "--standalone", "--non-interactive"])
     else:
         email = (email or "").strip()
@@ -358,22 +367,27 @@ def cmd_ssl(email: str | None) -> None:
         if not email:
             die("Email is required for certbot --agree-tos.")
 
-        info("Requesting new certificates...")
+        if reissue_ecdsa:
+            info("Reissuing certificates as ECDSA P-256 (--force-renewal)...")
+        else:
+            info("Requesting new ECDSA P-256 certificates...")
         for name in cfg.cert_hostnames:
             info(f"  certonly -d {name}")
-            run(
-                [
-                    *base,
-                    "certonly",
-                    "--standalone",
-                    "--non-interactive",
-                    "--agree-tos",
-                    "-m",
-                    email,
-                    "-d",
-                    name,
-                ]
-            )
+            cmd = [
+                *base,
+                "certonly",
+                "--standalone",
+                "--non-interactive",
+                "--agree-tos",
+                "-m",
+                email,
+                "-d",
+                name,
+                *ecdsa_opts,
+            ]
+            if reissue_ecdsa:
+                cmd.append("--force-renewal")
+            run(cmd)
 
     info("")
     info("SSL done.")
@@ -898,6 +912,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_ssl = sub.add_parser("ssl", help="Create or renew Let's Encrypt certs (certbot)")
     p_ssl.add_argument("--email", help="Let's Encrypt account email (new certs)")
+    p_ssl.add_argument(
+        "--reissue-ecdsa",
+        action="store_true",
+        help="Force-reissue all certs as ECDSA P-256 (smaller DoH/DoT handshake)",
+    )
 
     p_test = sub.add_parser("test", help="Port + DNS functional/perf checks")
     p_test.add_argument("--domain", help="Override DOMAIN from .env")
@@ -928,7 +947,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.command == "setup":
         cmd_setup(args.domain, args.ip)
     elif args.command == "ssl":
-        cmd_ssl(args.email)
+        cmd_ssl(args.email, reissue_ecdsa=args.reissue_ecdsa)
     elif args.command == "test":
         cmd_test(
             args.domain,

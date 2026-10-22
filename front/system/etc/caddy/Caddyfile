@@ -63,25 +63,29 @@ https://{$ADMIN_DOMAIN} {
 # DNS - DoH (always HTTPS — required by protocol)
 # -----------------------------------------------------------------------------
 https://{$DNS_DOMAIN} {
-	tls /etc/letsencrypt/live/{$DNS_DOMAIN}/fullchain.pem /etc/letsencrypt/live/{$DNS_DOMAIN}/privkey.pem
+	tls /etc/letsencrypt/live/{$DNS_DOMAIN}/fullchain.pem /etc/letsencrypt/live/{$DNS_DOMAIN}/privkey.pem {
+		protocols tls1.3
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
-		X-XSS-Protection "1; mode=block"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	root * /var/capy/admin
-
 	handle /dns-query {
+		# Low-latency h2c to dnsdist :5301 (TLS already terminated here)
 		reverse_proxy h2c://{$CORE_HOST:host.docker.internal}:5301 {
+			flush_interval -1
 			transport http {
 				versions h2c 2
-				keepalive 2m
-				keepalive_idle_conns 32
+				compression off
+				keepalive 5m
+				keepalive_idle_conns 64
+				keepalive_idle_conns_per_host 64
+				dial_timeout 2s
+				response_header_timeout 5s
 				read_timeout 10s
 				write_timeout 10s
 			}

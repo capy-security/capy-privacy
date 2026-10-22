@@ -61,7 +61,8 @@ Host CLI (stdlib Python): `./capy`
 ```bash
 cd capy-privacy
 ./capy setup --domain example.com --ip 203.0.113.10
-./capy ssl --email you@example.com   # certbot; ports 80/443 must be free
+./capy ssl --email you@example.com   # ECDSA P-256 via certbot; ports 80/443 must be free
+# ./capy ssl --reissue-ecdsa --email you@example.com   # migrate existing RSA certs → ECDSA
 ./capy up                            # docker compose up -d --build
 ./capy test
 ```
