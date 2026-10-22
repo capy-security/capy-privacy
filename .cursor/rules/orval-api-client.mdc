@@ -17,14 +17,14 @@ The admin TypeScript client is **generated** from the FastAPI OpenAPI schema. Do
 From the repo (one command from admin exports the spec then runs Orval):
 
 ```bash
-cd admin && yarn api
+cd admin && pnpm api
 ```
 
 Equivalent two-step flow:
 
 ```bash
-cd api && poetry run export-openapi   # writes api/openapi.json
-cd admin && yarn api                  # orval reads ../api/openapi.json
+cd api && uv run export-openapi       # writes api/openapi.json
+cd admin && pnpm api                  # orval reads ../api/openapi.json
 ```
 
 - Spec path: `api/openapi.json` (committed; source for Orval).

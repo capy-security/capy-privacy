@@ -1,21 +1,21 @@
 ---
-description: Frontend — admin app (SvelteKit, yarn, Orval, svelte-query)
+description: Frontend — admin app (SvelteKit, pnpm, Orval, svelte-query)
 alwaysApply: false
 globs: admin/**
 ---
 
 # Frontend rules
 
-## Yarn
+## pnpm
 
-The **admin** folder is a Svelte (SvelteKit/Vite) app. Use yarn from that directory. 
-Run commands from `admin/`. Use yarn only; do not use npm or pnpm.
+The **admin** folder is a Svelte (SvelteKit/Vite) app. Use pnpm from that directory.
+Run commands from `admin/`. Use pnpm only; do not use npm or yarn.
 
 Examples:
 
-- Dev server: `yarn dev`
-- Build: `yarn build`
-- Generate API client: `yarn api` (runs Orval)
+- Dev server: `pnpm dev`
+- Build: `pnpm build`
+- Generate API client: `pnpm api` (runs Orval)
 
 ## SvelteKit
 
@@ -28,9 +28,9 @@ The admin app is built with SvelteKit (and Vite). Follow SvelteKit conventions:
 
 ## Orval (API client)
 
-Orval generates the TypeScript API client from `api/openapi.json` (exported via `poetry run export-openapi`). Config: `admin/orval.config.ts`. Generated code: `admin/src/lib/api/generated/`. **Do not edit generated files.**
+Orval generates the TypeScript API client from `api/openapi.json` (exported via `uv run export-openapi`). Config: `admin/orval.config.ts`. Generated code: `admin/src/lib/api/generated/`. **Do not edit generated files.**
 
-Regenerate with `cd admin && yarn api` (exports OpenAPI then runs Orval). See @orval-api-client.mdc — regenerate after API changes and before admin work that depends on the client.
+Regenerate with `cd admin && pnpm api` (exports OpenAPI then runs Orval). See @orval-api-client.mdc — regenerate after API changes and before admin work that depends on the client.
 
 - HTTP calls go through the custom **fetch mutator** (`admin/src/lib/api/mutator.ts`): base URL, JSON headers, API envelope (`success` / `data`), and errors aligned with TanStack Query.
 

@@ -27,10 +27,6 @@ coverage/
 .turbo/
 .pnpm-store/
 .npm/
-.yarn/cache/
-.yarn/unplugged/
-.pnp
-.pnp.js
 
 # -----------------------------------------------------------------------------
 # Environment variables & local secrets
@@ -67,8 +63,7 @@ Thumbs.db
 # -----------------------------------------------------------------------------
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
 
 # -----------------------------------------------------------------------------
 # Production deploy data (directory tracked via .gitkeep / defaults)

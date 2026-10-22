@@ -6,28 +6,29 @@
 # -----------------------------------------------------------------------------
 # Stage 1: build admin SvelteKit app
 # -----------------------------------------------------------------------------
-FROM node:26-alpine AS builder
+FROM node:26-alpine3.24 AS builder
 
 WORKDIR /app
 
 # Copy admin app (package.json, lockfile, config, source)
-COPY admin/package.json admin/yarn.lock* admin/package-lock.json* ./
+COPY admin/package.json admin/pnpm-lock.yaml admin/pnpm-workspace.yaml ./
 COPY admin/ ./
 
-RUN npm install -g corepack
-RUN corepack enable yarn \
-    && yarn install --frozen-lockfile
+RUN npm install -g corepack \
+    && corepack enable \
+    && corepack prepare pnpm@12.14.0 --activate \
+    && pnpm install --frozen-lockfile
 
 # Build-time API URL (Vite embeds this)
 ARG VITE_API_URL=http://api.localhost/
 ENV VITE_API_URL=${VITE_API_URL}
 
-RUN yarn build
+RUN pnpm build
 
 # -----------------------------------------------------------------------------
-# Stage 2: runtime with Caddy + supervisor (alpine:latest, same as core)
+# Stage 2: runtime with Caddy (alpine:3.24, same as core)
 # -----------------------------------------------------------------------------
-FROM alpine:latest
+FROM alpine:3.24
 
 RUN apk add --no-cache caddy
 

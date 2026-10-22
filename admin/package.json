@@ -9,7 +9,7 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"api": "cd ../api && poetry run export-openapi && cd ../admin && orval"
+		"api": "cd ../api && uv run export-openapi && cd ../admin && orval"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.1",
@@ -39,5 +39,5 @@
 		"jwt-decode": "^4.0.0",
 		"svelte-heros-v2": "^3.0.1"
 	},
-	"packageManager": "yarn@4.12.0"
+	"packageManager": "pnpm@12.14.0"
 }

@@ -69,14 +69,14 @@ A modern, responsive web application for managing DNS filtering, domains, catego
 - **Icons**: [svelte-heros-v2](https://github.com/craftzdog/svelte-heros-v2) - Heroicons for Svelte
 - **API Client**: Auto-generated with [Orval](https://orval.dev/) from OpenAPI spec
 - **Authentication**: JWT token-based authentication
-- **Package Manager**: [Yarn](https://yarnpkg.com/) v4
+- **Package Manager**: [pnpm](https://pnpm.io/) v12 (via Corepack)
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
 - **Node.js**: v18 or higher
-- **Yarn**: v4.12.0 or higher (specified in `package.json`)
+- **pnpm**: v12.14.0 or higher (specified in `package.json`; enable with `corepack enable`)
 - **Backend API**: The Capy Privacy DNS API should be running and accessible
 
 ## 🚀 Installation
@@ -84,12 +84,12 @@ Before you begin, ensure you have the following installed:
 1. **Clone the repository** (if not already done):
    ```bash
    git clone <repository-url>
-   cd frontend
+   cd admin
    ```
 
-2. **Install dependencies using Yarn**:
+2. **Install dependencies using pnpm**:
    ```bash
-   yarn install
+   pnpm install
    ```
 
    This will install all project dependencies defined in `package.json`.
@@ -101,7 +101,7 @@ Before you begin, ensure you have the following installed:
 To start the development server with hot module replacement:
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 The application will be available at `http://localhost:5173` (or the next available port).
@@ -116,31 +116,19 @@ The application will be available at `http://localhost:5173` (or the next availa
 
 ```bash
 # Start development server
-yarn dev
+pnpm dev
 
 # Build for production
-yarn build
+pnpm build
 
 # Preview production build locally
-yarn preview
+pnpm preview
 
 # Type checking
-yarn check
+pnpm check
 
-# Type checking in watch mode
-yarn check:watch
-
-# Format code with Prettier
-yarn format
-
-# Lint code (Prettier + ESLint)
-yarn lint
-
-# Generate API client from OpenAPI spec
-yarn api:generate
-
-# Fetch OpenAPI spec from running API
-yarn api:fetch
+# Export OpenAPI + regenerate Orval API client
+pnpm api
 ```
 
 ## 🔧 Configuration
@@ -212,7 +200,7 @@ The frontend uses auto-generated API clients from the OpenAPI specification:
 To regenerate API clients after backend changes:
 
 ```bash
-yarn api:generate
+pnpm api
 ```
 
 ## 🎨 Styling
@@ -236,7 +224,7 @@ Ensure the backend API is running and accessible. Check the API URL in `src/lib/
 
 ### Type Errors
 
-Run `yarn check` to identify TypeScript errors. Fix them or regenerate API types with `yarn api:generate`.
+Run `pnpm check` to identify TypeScript errors. Fix them or regenerate API types with `pnpm api`.
 
 ### Build Errors
 
@@ -244,31 +232,23 @@ Clear the build cache and reinstall dependencies:
 
 ```bash
 rm -rf .svelte-kit node_modules
-yarn install
-yarn build
+pnpm install
+pnpm build
 ```
 
 ## 📝 Code Style
 
 The project uses:
 
-- **Prettier**: Code formatting
 - **ESLint**: Code linting
 - **TypeScript**: Type safety
-
-Format your code before committing:
-
-```bash
-yarn format
-```
 
 ## 🤝 Contributing
 
 1. Make your changes
-2. Format code: `yarn format`
-3. Check types: `yarn check`
-4. Test your changes locally: `yarn dev`
-5. Submit your changes
+2. Check types: `pnpm check`
+3. Test your changes locally: `pnpm dev`
+4. Submit your changes
 
 ## 📄 License
 

@@ -55,8 +55,6 @@ temp/
 **/node_modules/
 **/.pnpm-store/
 **/.npm/
-**/.yarn/cache/
-**/.yarn/unplugged/
 **/.turbo/
 **/.svelte-kit/
 **/dist/
