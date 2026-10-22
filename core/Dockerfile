@@ -3,9 +3,9 @@
 # Build context: ./core (e.g. sudo docker compose build capy-core)
 
 # -----------------------------------------------------------------------------
-# Stage: runtime (alpine:latest for newer pdns-recursor; edge has broken dnsdist deps)
+# Stage: runtime (alpine:3.24 for newer pdns-recursor; edge has broken dnsdist deps)
 # -----------------------------------------------------------------------------
-FROM alpine:latest
+FROM alpine:3.24
 
 ARG application="capy-core"
 ARG domain="dns.example.com"
