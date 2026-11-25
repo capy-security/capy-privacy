@@ -1,8 +1,4 @@
-# Generated or edited by the app;
-# No restart needed to reload
-::/0
-0.0.0.0/0
+# Unused: dnsdist product allowlist is console-driven from SQLite allowed_ip.
+# Boot ACL is loopback-only in dnsdist.conf until the API syncs.
 127.0.0.0/8
-10.0.0.0/8
-192.168.0.0/16
-172.16.0.0/12
+::1

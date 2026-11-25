@@ -58,27 +58,19 @@ FILTER_EXPECTED_IP = "127.0.0.1"
 PERF_DOMAIN = "example.com"
 DEFAULT_PERF_SAMPLES = 5
 
+# Legacy unused by dnsdist (product ACL is console-driven). Kept so old mounts do not break.
 DNSDIST_ACL_DEFAULT = """\
-# Generated or edited by the app;
-# No restart needed to reload
-::/0
-0.0.0.0/0
+# Unused: dnsdist product allowlist is console-driven from SQLite allowed_ip.
+# Boot ACL is loopback-only in dnsdist.conf until the API syncs.
 127.0.0.0/8
-10.0.0.0/8
-192.168.0.0/16
-172.16.0.0/12
+::1
 """
 
 POWERDNS_ACL_DEFAULT = """\
-# Generated or edited by the app;
+# Recursor only accepts traffic from dnsdist on loopback (Proxy Protocol).
+# Product client allowlist is enforced by dnsdist ACL (console-driven).
 # reload with: rec_control reload-acls
-- ::/0
-- 0.0.0.0/0
 - 127.0.0.0/8
-- 10.0.0.0/8
-- 192.168.0.0/16
-- 172.16.0.0/12
-# Add your public IP(s) here if you need to allow external access (e.g. 203.0.113.10)
 """
 
 CADDY_PLACEHOLDER = "# Add custom Caddy site blocks here (*.caddy).\n"
@@ -136,6 +128,7 @@ class EnvConfig:
     domain: str = "localhost"
     ip_address: str = "127.0.0.1"
     api_secret: str = ""
+    dnsdist_console_key: str = ""
 
     @property
     def api_domain(self) -> str:
@@ -173,6 +166,7 @@ def load_config() -> EnvConfig:
         domain=raw.get("DOMAIN", "localhost") or "localhost",
         ip_address=raw.get("IP_ADDRESS", "127.0.0.1") or "127.0.0.1",
         api_secret=raw.get("API_SECRET", ""),
+        dnsdist_console_key=raw.get("DNSDIST_CONSOLE_KEY", ""),
     )
 
 
@@ -182,6 +176,7 @@ def write_env(cfg: EnvConfig) -> None:
         f"DOMAIN={cfg.domain}\n"
         f"IP_ADDRESS={cfg.ip_address}\n"
         f"API_SECRET={cfg.api_secret}\n"
+        f"DNSDIST_CONSOLE_KEY={cfg.dnsdist_console_key}\n"
     )
     ENV_FILE.write_text(content, encoding="utf-8")
     info(f"Wrote {ENV_FILE}")
@@ -260,7 +255,11 @@ def cmd_setup(domain: str | None, ip: str | None) -> None:
     ensure_deploy_layout()
 
     raw = read_env()
-    existing = load_config() if raw else EnvConfig(domain="", ip_address="", api_secret="")
+    existing = (
+        load_config()
+        if raw
+        else EnvConfig(domain="", ip_address="", api_secret="", dnsdist_console_key="")
+    )
 
     domain = (domain or raw.get("DOMAIN") or "").strip()
     ip = (ip or raw.get("IP_ADDRESS") or "").strip()
@@ -289,8 +288,16 @@ def cmd_setup(domain: str | None, ip: str | None) -> None:
     api_secret = existing.api_secret or base64.b64encode(
         secrets.token_bytes(32)
     ).decode("ascii")
+    dnsdist_console_key = existing.dnsdist_console_key or base64.b64encode(
+        secrets.token_bytes(32)
+    ).decode("ascii")
 
-    cfg = EnvConfig(domain=domain, ip_address=ip, api_secret=api_secret)
+    cfg = EnvConfig(
+        domain=domain,
+        ip_address=ip,
+        api_secret=api_secret,
+        dnsdist_console_key=dnsdist_console_key,
+    )
     write_env(cfg)
 
     info("")

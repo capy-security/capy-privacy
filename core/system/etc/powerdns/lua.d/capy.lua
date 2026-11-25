@@ -4,12 +4,6 @@ env = assert (driver.sqlite3())
 local db_path = "/var/capy/database/database.db"
 local decision_cache = {}
 local decision_cache_ttl_seconds = 60
--- In-memory allowlist as a PowerDNS NetmaskGroup (hosts + CIDRs).
--- Rebuilt from SQLite at most once every allow_nmg_ttl_seconds so each DNS
--- query does not hit the DB; portal changes can take up to that long to apply.
-local allow_nmg = nil
-local allow_nmg_expires_at = 0
-local allow_nmg_ttl_seconds = 60
 
 local function cache_key(client_ip, domain)
     return client_ip .. "|" .. domain
@@ -41,11 +35,6 @@ end
 -- Annotate dq for protobuf metrics via policy tags only (never touch appliedPolicy).
 -- appliedPolicy is the RPZ object; half-setting it breaks sinkhole answers with
 -- "Attempt to print an unset DNSName". Collector maps reserved tags to blocked.
-local function apply_ip_deny_policy(dq, _client_ip)
-    dq.variable = true
-    dq:addPolicyTag("capy-deny")
-end
-
 local function apply_block_policy(dq, _domain, category_name)
     dq.variable = true
     dq:addPolicyTag("capy-blocked")
@@ -74,85 +63,11 @@ end
 con = connect_database()
 
 
--- dnsdist → recursor is 127.0.0.1:5353 (health checks + Proxy Protocol hop).
--- Loopback is not an external client; allowlist applies to real remoteaddrs only.
-local function is_loopback_ip(client_ip)
-    return client_ip == "127.0.0.1" or client_ip == "::1"
-end
-
--- Load every allowed_ip row into a fresh NetmaskGroup.
--- Example DB rows: "203.0.113.10", "37.167.0.0/16"
---   → nmg:addMask("203.0.113.10")   -- treated as /32
---   → nmg:addMask("37.167.0.0/16")  -- whole /16
--- Then nmg:match(37.167.37.237) is true; nmg:match(8.8.8.8) is false.
-local function load_allow_nmg()
-    local nmg = newNMG()
-
-    if not con then
-        con = connect_database()
-        if not con then
-            -- Fail closed: empty group denies all non-loopback clients
-            return nmg
-        end
-    end
-
-    local result, sql_err = exec_sql("SELECT ip FROM allowed_ip")
-    if sql_err ~= "" then
-        pdnslog(string.format("Allowlist reload failed: %s", sql_err), pdns.loglevels.Error)
-        return nmg
-    end
-
-    for _, row in ipairs(result) do
-        local mask = row.ip
-        if mask and mask ~= "" then
-            local ok, err = pcall(function()
-                nmg:addMask(mask)
-            end)
-            if not ok then
-                pdnslog(
-                    string.format("Invalid allowlist entry skipped: %s (%s)", mask, tostring(err)),
-                    pdns.loglevels.Warning
-                )
-            end
-        end
-    end
-
-    return nmg
-end
-
--- Return cached NetmaskGroup, or rebuild if missing / TTL expired.
--- Timeline example (ttl = 60s):
---   t=0   first query → SELECT + build nmg, expires_at = 60
---   t=1..59  further queries → reuse same nmg (no DB)
---   t=60  next query → rebuild from DB again (picks up portal edits)
-local function get_allow_nmg()
-    if allow_nmg and allow_nmg_expires_at > os.time() then
-        return allow_nmg
-    end
-    allow_nmg = load_allow_nmg()
-    allow_nmg_expires_at = os.time() + allow_nmg_ttl_seconds
-    return allow_nmg
-end
-
-local function is_client_ip_allowed(remoteaddr)
-    local client_ip = remoteaddr:toString()
-    if is_loopback_ip(client_ip) then
-        return true
-    end
-    -- PowerDNS: match ComboAddress against all masks in the group
-    return get_allow_nmg():match(remoteaddr)
-end
-
-
 function preresolve(dq)
     local client_ip = dq.remoteaddr:toString()
 
-    if not is_client_ip_allowed(dq.remoteaddr) then
-        pdnslog(string.format("IP DENIED (not in allowlist): %s", client_ip), pdns.loglevels.Debug)
-        apply_ip_deny_policy(dq, client_ip)
-        dq.rcode = pdns.REFUSED
-        return true
-    end
+    -- IP allowlist is enforced by dnsdist (console-driven ACL) before queries
+    -- reach the recursor. This script only sinkholes domains.
 
     -- For now only enforce sinkhole policy on IPv4 A queries.
     -- All other qtypes are forwarded to normal recursion.

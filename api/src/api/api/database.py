@@ -3,6 +3,7 @@ from typing import Annotated
 from peewee import SqliteDatabase, Model, BooleanField, IntegerField
 from api.database import get_database_fastapi
 from api.models.api import ApiResponse
+from api.dnsdist_acl import try_add_allowed_ip, try_remove_allowed_ip, try_sync_acl_from_database
 from api.models.allowed_ip import AllowedIP, AllowedIPDB
 from api.models.category import Category, CategoryDB
 from api.models.client import Client, ClientDB
@@ -242,6 +243,8 @@ async def create_allowed_ip(
     """Allow an IP address or CIDR network to use the DNS resolver (default-deny allowlist)."""
     existing = AllowedIPDB.get_or_none(AllowedIPDB.ip == allowed_ip.ip)
     if existing:
+        if not try_add_allowed_ip(existing.ip):
+            try_sync_acl_from_database()
         return ApiResponse(
             success=True,
             message="Entry already allowed",
@@ -249,6 +252,9 @@ async def create_allowed_ip(
         )
     new_obj = AllowedIPDB.from_pydantic(allowed_ip)
     new_obj.save(force_insert=True)
+    if not try_add_allowed_ip(new_obj.ip):
+        # Console may be down; full sync converges on next successful push.
+        try_sync_acl_from_database()
     return ApiResponse(success=True, message="Allowed successfully", data=new_obj.to_pydantic())
 
 
@@ -273,6 +279,8 @@ async def delete_allowed_ip(
         raise HTTPException(status_code=404, detail="Allowed IP not found")
     deleted_data = existing.to_pydantic()
     existing.delete_instance()
+    if not try_remove_allowed_ip(deleted_data.ip):
+        try_sync_acl_from_database()
     return ApiResponse(success=True, message="Removed from allowlist", data=deleted_data)
 
 

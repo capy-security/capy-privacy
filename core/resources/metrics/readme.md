@@ -12,8 +12,10 @@ sinkhole answers in the Recursor.
 | Tag | Meaning |
 | --- | --- |
 | `capy-blocked` | Domain sinkhole |
-| `capy-deny` | Client IP not allowlisted |
 | `<category.name>` | Optional category (e.g. `ads`) |
+
+Non-allowlisted clients are dropped by **dnsdist ACL** before the Recursor, so
+they never appear in protobuf metrics (there is no `capy-deny` tag).
 
 The collector sets `blocked=true` when tags include a reserved `capy-*` tag,
 stores that name in `applied_policy`, and maps the first remaining tag that

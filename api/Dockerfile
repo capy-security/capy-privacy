@@ -14,8 +14,8 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /capy
 
-# Build deps for C extensions (e.g. argon2-cffi)
-RUN apk add --no-cache gcc musl-dev
+# Build deps for C extensions (argon2-cffi, libnacl/dnsdist-console)
+RUN apk add --no-cache gcc musl-dev libsodium-dev
 
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-install-project --no-dev --no-editable
@@ -29,6 +29,9 @@ RUN uv sync --locked --no-dev --no-editable
 FROM python:3.15-alpine3.24
 
 WORKDIR /capy
+
+# Runtime lib for dnsdist_console (libnacl → libsodium)
+RUN apk add --no-cache libsodium
 
 COPY --from=builder /capy/.venv /capy/.venv
 ENV PATH="/capy/.venv/bin:$PATH"

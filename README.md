@@ -69,7 +69,7 @@ cd capy-privacy
 
 - **Production (real domain):** `./capy setup` then `./capy ssl` (certbot → `./deploy/ssl`).
 - **Localhost / mkcert:** keep using legacy `./capy-init.sh` for now.
-- /!\ On a public server, tighten `./deploy/powerdns/allow_from.yml` (and `./deploy/dnsdist/allow_from.txt`).
+- Client IP allowlisting is managed in the admin **Client IPs** page (SQLite → dnsdist console ACL). `./capy setup` writes `DNSDIST_CONSOLE_KEY` into `.env` for that path.
 
 3. **Build and run**
 
@@ -96,7 +96,7 @@ After logging in, the sidebar gives access to:
 
 - **Domains** — Add, edit or remove domains; assign them to a category and set allow/block.
 - **Clients** — Manage DNS clients (devices by IP); link them to groups for filtering policy.
-- **Client IPs** — Default-deny allowlist: allow trusted source IPs or CIDR subnets seen in DNS metrics.
+- **Client IPs** — Default-deny allowlist at dnsdist: allow trusted source IPs or CIDR subnets (synced live over the dnsdist console).
 - **Categories** — Define blocklist categories (e.g. ads, malware) and assign domains to them.
 - **Groups** — Create groups of clients and attach categories to apply filtering per group.
 - **Metrics** — Browse DNS query metrics (domains, clients, blocked/allowed) with filters and search.
@@ -120,12 +120,12 @@ capy-privacy/
 ├── front/                # Caddyfile + blocked page (baked into image)
 ├── admin/                # SvelteKit source for the admin UI (built into front image)
 ├── docs/                 # Architecture and component docs
-└── deploy/               # Per-install data (ssl, database, ACLs, custom Caddy, www)
+└── deploy/               # Per-install data (ssl, database, recursor ACL, custom Caddy, www)
 ```
 
 ## Docs
 
-- [PowerDNS Lua policy (`capy.lua`)](docs/lua.md) — allowlist, CIDR NetmaskGroup cache, sinkholing, metrics policies
+- [PowerDNS Lua policy (`capy.lua`)](docs/lua.md) — domain sinkholing + metrics; IP allowlist is dnsdist console-driven
 - [Public hosting](docs/public-hosting.md) — VPS / Internet TLS setup notes
 
 Caddy logs go to stdout/stderr — use `sudo docker compose logs -f capy-front`.

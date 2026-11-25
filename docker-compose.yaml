@@ -1,6 +1,7 @@
 # Base domain (e.g. capysecurity.com). API/DNS/Admin are always api.$DOMAIN, dns.$DOMAIN, admin.$DOMAIN.
 # Set DOMAIN (and optionally IP_ADDRESS) in .env.
-# Per-deploy files live under ./deploy/ (ssl, database, ACLs, custom Caddy vhosts, www).
+# Per-deploy files live under ./deploy/ (ssl, database, recursor ACL, custom Caddy vhosts, www).
+# Product client allowlist: SQLite allowed_ip → dnsdist console (DNSDIST_CONSOLE_KEY).
 # Docker Compose on Debian — run: sudo docker compose up -d --build
 services:
   capy-api:
@@ -11,6 +12,8 @@ services:
     environment:
       API_ENV: "production"
       CORE_HOST: ${CORE_HOST:-host.docker.internal}
+      DNSDIST_CONSOLE_KEY: ${DNSDIST_CONSOLE_KEY}
+      DNSDIST_CONSOLE_PORT: ${DNSDIST_CONSOLE_PORT:-5199}
     extra_hosts:
       - "host.containers.internal:host-gateway"
       - "host.docker.internal:host-gateway"
@@ -42,12 +45,12 @@ services:
     env_file: .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+      DNSDIST_CONSOLE_KEY: ${DNSDIST_CONSOLE_KEY}
     depends_on:
       - capy-api
     volumes:
       - ./deploy/database/:/var/capy/database/:Z
       - ./deploy/ssl/:/etc/letsencrypt/:ro,Z
-      - ./deploy/dnsdist/allow_from.txt:/etc/dnsdist/allow_from.txt:ro,Z
       - ./deploy/powerdns/allow_from.yml:/etc/powerdns/allow_from.yml:ro,Z
     ulimits:
       nofile:

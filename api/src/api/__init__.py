@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # from fastapi.staticfiles import StaticFiles
+import asyncio
 import logging
 
 
@@ -21,11 +22,20 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from api.dnsdist_acl import sync_acl_with_retry
+
     logger.info("starting API...")
     logger.info(f"origins: {str(api_conf.origins)}")
     get_database_fastapi()
     logger.info("Database connected and tables created")
+    # Push allowed_ip → dnsdist ACL in the background (core may still be starting).
+    sync_task = asyncio.create_task(sync_acl_with_retry())
     yield
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
     logger.info("stopping API...")
     await close_database()
 

@@ -83,6 +83,8 @@ def _bind_models():
 
 def _seed_bootstrap_allowed_ip():
     """If the allowlist is empty, seed IP_ADDRESS so DNS is not locked out after upgrade."""
+    from api.dnsdist_acl import try_sync_acl_from_database
+
     ip_address = (os.environ.get("IP_ADDRESS") or "").strip()
     if not ip_address:
         return
@@ -91,6 +93,7 @@ def _seed_bootstrap_allowed_ip():
             return
         AllowedIPDB.create(ip=ip_address, reason="Bootstrap allowlist entry")
         logger.info(f"Seeded empty allowlist with IP_ADDRESS={ip_address}")
+        try_sync_acl_from_database()
     except Exception as e:
         logger.warning(f"Could not seed bootstrap allowed IP: {e}")
 
@@ -241,3 +244,7 @@ def populate_database():
         logger.info(
             f"Group {group.name}: linked to {len(categories)} categories and client {client.ip}"
         )
+
+    from api.dnsdist_acl import try_sync_acl_from_database
+
+    try_sync_acl_from_database()
