@@ -206,6 +206,7 @@ async def delete_client(
     if not existing:
         raise HTTPException(status_code=404, detail=f"Client with id={id} not found")
     deleted_data = existing.to_pydantic()
+    AssociationClients.delete().where(AssociationClients.client == existing).execute()
     existing.delete_instance()
     return ApiResponse(success=True, message="Deleted successfully", data=deleted_data)
 
@@ -349,6 +350,7 @@ async def delete_category(
     if not existing:
         raise HTTPException(status_code=404, detail=f"Category with id={id} not found")
     deleted_data = existing.to_pydantic()
+    AssociationCategories.delete().where(AssociationCategories.category == existing).execute()
     existing.delete_instance()
     return ApiResponse(success=True, message="Deleted successfully", data=deleted_data)
 

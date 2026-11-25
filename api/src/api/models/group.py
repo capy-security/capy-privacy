@@ -53,19 +53,28 @@ class GroupDB(Model):
 
     def to_pydantic(self):
         """Create a Group instance from a GroupDB"""
-        # Query categories through the association table
+        # Join so orphaned association rows (deleted category/client) are skipped
         categories_ids = [
-            ac.category.id
-            for ac in AssociationCategories.select().where(
-                AssociationCategories.group == self
+            row.id
+            for row in (
+                CategoryDB.select(CategoryDB.id)
+                .join(
+                    AssociationCategories,
+                    on=(AssociationCategories.category == CategoryDB.id),
+                )
+                .where(AssociationCategories.group == self)
             )
         ]
 
-        # Query clients through the association table
         clients_ids = [
-            ac.client.id
-            for ac in AssociationClients.select().where(
-                AssociationClients.group == self
+            row.id
+            for row in (
+                ClientDB.select(ClientDB.id)
+                .join(
+                    AssociationClients,
+                    on=(AssociationClients.client == ClientDB.id),
+                )
+                .where(AssociationClients.group == self)
             )
         ]
 
