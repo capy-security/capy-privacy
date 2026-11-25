@@ -9,7 +9,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, Iterable
+from typing import Iterable
+
+from api.dnsdist_console import DnsdistConsole
 
 logger = logging.getLogger(__name__)
 
@@ -43,20 +45,17 @@ def _lua_string_list(masks: Iterable[str]) -> str:
     return "{" + ", ".join(parts) + "}"
 
 
-def _open_console() -> Any:
-    # Lazy import: libnacl needs system libsodium (present in the API image).
-    from dnsdist_console import Console
-
+def _open_console() -> DnsdistConsole:
     key = _console_key()
     if not key:
         raise RuntimeError("DNSDIST_CONSOLE_KEY is not set")
-    return Console(key=key, host=_console_host(), port=_console_port())
+    return DnsdistConsole(key=key, host=_console_host(), port=_console_port())
 
 
 def _run_command(cmd: str) -> str:
     console = _open_console()
     try:
-        return console.send_command(cmd=cmd)
+        return console.send_command(cmd)
     finally:
         console.disconnect()
 
