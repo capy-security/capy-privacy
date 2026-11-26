@@ -9,6 +9,8 @@ incoming:
   # Internal only; dnsdist fronts public :53/:853/:5300 (direct DoH) and :5301 (Caddy)
   listen:
     - 127.0.0.1:5353
+  # allow_from matches Proxy Protocol *client* IPs (not 127.0.0.1). Keep file open;
+  # product allowlist is enforced by dnsdist. proxy_protocol_from still limits PP peers.
   allow_from_file: /etc/powerdns/allow_from.yml
   proxy_protocol_from:
     - 127.0.0.0/8

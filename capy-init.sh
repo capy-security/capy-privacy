@@ -213,10 +213,11 @@ fi
 
 if [[ ! -f "${DEPLOY_ROOT}/powerdns/allow_from.yml" ]]; then
 	cat >"${DEPLOY_ROOT}/powerdns/allow_from.yml" <<'ACL'
-# Recursor only accepts traffic from dnsdist on loopback (Proxy Protocol).
-# Product client allowlist is enforced by dnsdist ACL (console-driven).
+# With Proxy Protocol, allow_from matches the *real client* from the PP header.
+# Product allowlisting is dnsdist's job; keep this open. Listen stays 127.0.0.1:5353.
 # reload with: rec_control reload-acls
-- 127.0.0.0/8
+- ::/0
+- 0.0.0.0/0
 ACL
 fi
 

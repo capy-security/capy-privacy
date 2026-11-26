@@ -1,4 +1,7 @@
-# Recursor only accepts traffic from dnsdist on loopback (Proxy Protocol).
-# Product client allowlist is enforced by dnsdist ACL (console-driven).
+# With Proxy Protocol, allow_from is matched against the *real client* address
+# dnsdist puts in the PP header — not 127.0.0.1. Product allowlisting stays on
+# dnsdist; this file must stay open so allowed clients can reach the recursor.
+# Socket is still loopback-only (listen 127.0.0.1:5353) + proxy_protocol_from.
 # reload with: rec_control reload-acls
-- 127.0.0.0/8
+- ::/0
+- 0.0.0.0/0

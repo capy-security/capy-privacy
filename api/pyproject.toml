@@ -26,3 +26,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/api", "src/export_openapi"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.6",
+]
