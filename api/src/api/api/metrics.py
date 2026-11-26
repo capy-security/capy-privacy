@@ -195,10 +195,12 @@ async def client_ips(
     ] = None,
 ) -> ApiResponse:
     """
-    List distinct client IPs seen in DNS metrics.
+    List distinct client IPs seen in DNS metrics that are on the allowlist.
 
-    Aggregates query counts and first/last seen timestamps, and marks each IP
-    as registered (client table) or allowed (allowed_ip allowlist, including CIDR).
+    Non-allowlisted clients are dropped at dnsdist and no longer appear in new
+    metrics; any historical denied rows are omitted here. Aggregates query
+    counts and first/last seen, and marks registration (client table) plus
+    which allowlist entry (host/CIDR) matched.
     """
     response = ApiResponse(success=False, message="", data={})
 
@@ -221,6 +223,10 @@ async def client_ips(
 
         results: list[dict] = []
         for row in rows:
+            allow = _allow_fields(row.client_ip, allow_entries)
+            # dnsdist drops non-allowlisted clients; hide stale denied metrics.
+            if not allow["allowed"]:
+                continue
             client = clients_by_ip.get(row.client_ip)
             results.append(
                 {
@@ -231,7 +237,7 @@ async def client_ips(
                     "registered": client is not None,
                     "client_id": client.id if client else None,
                     "client_name": client.name if client else None,
-                    **_allow_fields(row.client_ip, allow_entries),
+                    **allow,
                 }
             )
 

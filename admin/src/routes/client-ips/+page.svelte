@@ -26,7 +26,7 @@
 		XMark,
 	} from 'svelte-heros-v2';
 
-	type SortField = 'client_ip' | 'allowed' | 'query_count';
+	type SortField = 'client_ip' | 'query_count';
 
 	const queryClient = useQueryClient();
 	let user = $derived($authorizationStore);
@@ -187,12 +187,6 @@
 		return date.toLocaleString();
 	}
 
-	function handleAllow(entry: ClientIpEntry) {
-		actionError = null;
-		actionIp = entry.client_ip;
-		allowIpMutation.mutate({ data: { ip: entry.client_ip, reason: '' } });
-	}
-
 	function handleRevoke(entry: ClientIpEntry) {
 		if (!entry.allow_match || entry.allow_match !== entry.client_ip) {
 			actionError = `This IP is covered by ${entry.allow_match ?? 'a subnet'}. Remove that allowlist entry instead.`;
@@ -327,7 +321,8 @@
 		<div>
 			<h1 class="text-3xl font-bold text-white">DNS Client IPs</h1>
 			<p class="mt-1 text-sm text-gray-300">
-				Default deny — allow trusted IPs or CIDR subnets, register devices for filtering.
+				Manage the dnsdist allowlist and see allowlisted clients that reached DNS (non-allowlisted
+				queries are dropped at dnsdist and do not appear here).
 			</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
@@ -353,7 +348,8 @@
 		<div class="border-b border-white/10 px-4 py-3">
 			<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-200">Allowlist</h2>
 			<p class="mt-0.5 text-xs text-gray-400">
-				Hosts and CIDR networks permitted to query DNS (e.g. <code class="text-gray-300">37.167.0.0/16</code>).
+				Synced live to dnsdist. Hosts and CIDRs permitted to query DNS (e.g.
+				<code class="text-gray-300">37.167.0.0/16</code>).
 			</p>
 		</div>
 		{#if allowlistError}
@@ -457,7 +453,9 @@
 	{:else if clients.length === 0}
 		<div class="rounded-lg border border-white/20 bg-white/10 p-8 text-center backdrop-blur-sm">
 			<p class="text-gray-300">
-				{filterIp.trim() ? 'No client IPs match this filter.' : 'No client IPs found in metrics yet.'}
+				{filterIp.trim()
+					? 'No allowlisted client IPs match this filter.'
+					: 'No allowlisted client IPs in metrics yet. Add entries above, then query DNS from those networks.'}
 			</p>
 		</div>
 	{:else}
@@ -476,13 +474,7 @@
 								</button>
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
-								<button
-									type="button"
-									onclick={() => toggleSort('allowed')}
-									class="inline-flex items-center gap-1 hover:text-white"
-								>
-									Status{sortIndicator('allowed')}
-								</button>
+								Status
 							</th>
 							<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-300">
 								<button
@@ -514,25 +506,17 @@
 									{/if}
 								</td>
 								<td class="px-4 py-3 text-sm">
-									{#if entry.allowed}
+									<span
+										class="inline-flex rounded-full bg-green-500/20 px-2.5 py-0.5 text-xs font-medium text-green-200"
+									>
+										Allowlisted
+									</span>
+									{#if entry.allow_match && entry.allow_match !== entry.client_ip}
 										<span
-											class="inline-flex rounded-full bg-green-500/20 px-2.5 py-0.5 text-xs font-medium text-green-200"
+											class="ml-1 inline-flex rounded-full bg-sky-500/20 px-2.5 py-0.5 text-xs font-medium text-sky-200"
+											title={entry.allow_reason || undefined}
 										>
-											Allowed
-										</span>
-										{#if entry.allow_match && entry.allow_match !== entry.client_ip}
-											<span
-												class="ml-1 inline-flex rounded-full bg-sky-500/20 px-2.5 py-0.5 text-xs font-medium text-sky-200"
-												title={entry.allow_reason || undefined}
-											>
-												via {entry.allow_match}
-											</span>
-										{/if}
-									{:else}
-										<span
-											class="inline-flex rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-200"
-										>
-											Denied
+											via {entry.allow_match}
 										</span>
 									{/if}
 									{#if entry.registered}
@@ -576,23 +560,13 @@
 											>
 												Revoke
 											</button>
-										{:else if entry.allowed}
+										{:else if entry.allow_match && entry.allow_match !== entry.client_ip}
 											<span
 												class="px-2 py-1.5 text-xs text-gray-400"
 												title="Covered by allowlist entry {entry.allow_match}. Remove it from the allowlist above."
 											>
 												via subnet
 											</span>
-										{:else}
-											<button
-												onclick={() => handleAllow(entry)}
-												disabled={actionIp === entry.client_ip || isUpdatingAllowlist}
-												class="inline-flex items-center gap-1 rounded-md bg-green-600/80 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
-												title="Allow IP"
-											>
-												<ShieldCheck class="h-4 w-4" />
-												Allow
-											</button>
 										{/if}
 									</div>
 								</td>
