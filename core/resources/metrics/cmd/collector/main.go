@@ -65,7 +65,7 @@ Run "collector <command> --help" for command flags.
 
 func cmdListen(args []string) int {
 	fs := flag.NewFlagSet("listen", flag.ExitOnError)
-	listenAddr := fs.String("listen", "0.0.0.0:6000", "TCP listen address")
+	listenAddr := fs.String("listen", "127.0.0.1:6000", "TCP listen address")
 	dbPath := fs.String("db-path", "/var/capy/database/database.db", "SQLite database path")
 	sinks := fs.String("sink", "sqlite", "Comma-separated sinks: sqlite,json,text")
 	dryRun := fs.Bool("dry-run", false, "Decode and count; skip SQLite writes")

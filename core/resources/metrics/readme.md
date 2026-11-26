@@ -53,7 +53,7 @@ collector listen --sink sqlite
 
 # Debug / dry-run
 collector listen --sink text,json --dry-run --debug
-collector listen --listen 0.0.0.0:6000 --db-path=/var/capy/database/database.db
+collector listen --listen 127.0.0.1:6000 --db-path=/var/capy/database/database.db
 
 # Retention (CLI only)
 collector cleanup --days 30
@@ -64,7 +64,7 @@ collector cleanup --days 7 --dry-run
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `--listen` | `0.0.0.0:6000` | TCP bind address |
+| `--listen` | `127.0.0.1:6000` | TCP bind address (loopback; recursor on same host) |
 | `--db-path` | `/var/capy/database/database.db` | SQLite path |
 | `--sink` | `sqlite` | Comma list: `sqlite`, `json`, `text` |
 | `--dry-run` | false | Skip SQLite writes |
